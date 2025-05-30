@@ -7,6 +7,7 @@ from langchain_core.documents import Document
 from langchain.chains.summarize import load_summarize_chain
 from dotenv import load_dotenv
 from git import Repo
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 
 # Load environment variables
 load_dotenv()
@@ -53,8 +54,8 @@ def summarize_code(code_text: str) -> str:
     """
     # Get configuration from environment variables with fallbacks
     azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "https://mcaupybugs-ai.openai.azure.com/")
-    deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o") # Use your actual Azure deployment name
-    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2023-07-01-preview")
+    deployment_name = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-35-turbo-instruct") # Use your actual Azure deployment name
+    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
 
     # Create the LangChain Azure OpenAI instance
     llm = LangchainAzureOpenAI(
@@ -63,15 +64,22 @@ def summarize_code(code_text: str) -> str:
         azure_endpoint=azure_endpoint,
         api_key=api_key,
         temperature=0,
-
     )
     
-    # Create a document from the code text
-    document = Document(page_content=code_text)
+    # Split the code text into chunks
+    text_splitter = RecursiveCharacterTextSplitter(
+        chunk_size=3000,  # Characters per chunk (approximately 1000 tokens)
+        chunk_overlap=200,  # Overlap between chunks
+        separators=["\nFile:", "\n\n", "\n", " ", ""]  # Split preferentially at file boundaries
+    )
+
+    chunks = text_splitter.split_text(code_text)
+    documents = [Document(page_content=chunk) for chunk in chunks]
     
+    print(f"Split code into {len(documents)} chunks for processing")
     # Create and run the summarize chain
     chain = load_summarize_chain(llm, chain_type="map_reduce")
-    return chain.invoke({"input_documents": [document]})
+    return chain.invoke({"input_documents": documents})
 
 def generate_readme(summary: str) -> str:
     prompt = f"""
@@ -88,8 +96,8 @@ Summary:
 {summary}
 """
     llm = LangchainAzureOpenAI(
-        azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-4o"),
-        api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2023-07-01-preview"),
+        azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-35-turbo-instruct"),
+        api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"),
         azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", "https://mcaupybugs-ai.openai.azure.com/"),
         api_key=api_key,
         temperature=0.3
@@ -123,8 +131,8 @@ def interactive_chat():
         raise ValueError("AZURE_OPENAI_API_KEY environment variable is not set.")
     
     azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "https://mcaupybugs-ai.openai.azure.com/")
-    deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-35-turbo")  # Use your actual deployment name
-    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2023-07-01-preview")
+    deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-35-turbo-instruct")  # Use your actual deployment name
+    api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
 
     client = AzureOpenAI(
         api_version=api_version,
