@@ -10,7 +10,7 @@ from git import Repo
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import FAISS
 from langchain_openai import AzureOpenAIEmbeddings
-
+from langchain_core.prompts import PromptTemplate
 # Load environment variables
 load_dotenv()
 
@@ -217,19 +217,30 @@ Generate a complete, well-structured README.md following the sections above. If 
     return llm.invoke(prompt)
 
 def generate_readme(summary: str) -> str:
-    prompt = f"""
-You are a professional technical writer. Based on the following codebase summary, generate a complete README.md file. 
-Include: 
-- Project Title
-- Description
-- Installation
-- Usage
-- Features (if applicable)
-- License (if applicable)
+#     prompt = f"""
+# You are a professional technical writer. Based on the following codebase summary, generate a complete README.md file. 
+# Include: 
+# - Project Title: Clear and descriptive
+# - Description: Overview of what the project does and its purpose
+# - Architecture: How the components work together (if applicable)
+# - Prerequisites: Required software, accounts, and configurations
+# - Installation: Step-by-step setup instructions
+# - Configuration: Environment variables, settings, and Azure-specific configurations
+# - Usage: How to use the software with examples
+# - API Reference: If the project exposes APIs (if applicable)
+# - Development: Instructions for contributors (if applicable)
+# - Deployment: How to deploy to Azure (if applicable)
+# - Security: Security considerations and best practices
+# - Troubleshooting: Common issues and solutions
+# - License: Project license information
 
-Summary:
-{summary}
-"""
+# Summary:
+# {summary}
+# """
+    # Ensure summary is a string
+    if not isinstance(summary, str):
+        print(f"Warning: summary is not a string, but {type(summary)}. Converting to string.")
+        summary = str(summary)
     llm = LangchainAzureOpenAI(
         azure_deployment=os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-35-turbo-instruct"),
         api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"),
@@ -237,7 +248,108 @@ Summary:
         api_key=api_key,
         temperature=0.3
     )
-    return llm.invoke(prompt)
+
+    docs = [Document(page_content=summary)]
+    map_template = """
+    Analyze this portion of a codebase summary and extract the most important information:
+    
+    {text}
+    
+    KEY POINTS:
+    """
+    map_prompt = PromptTemplate(template=map_template, input_variables=["text"])
+
+    combine_template = """
+    Based on these key points from a codebase analysis, create a concise summary that captures the essence of the project:
+    
+    {text}
+    
+    CONCISE SUMMARY:
+    """
+    combine_prompt = PromptTemplate(template=combine_template, input_variables=["text"])
+    if len(summary) > 2000:
+        print(f"Summary is large ({len(summary)} chars). Condensing first...")
+        
+        # Split into chunks
+        text_splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=100,
+            separators=["\n\n", "\n", ". ", " ", ""]
+        )
+        
+        split_docs = text_splitter.split_documents(docs)
+        print(f"Split summary into {len(split_docs)} chunks")
+        
+        # Use map_reduce to condense the summary
+        chain = load_summarize_chain(
+            llm, 
+            chain_type="map_reduce",
+            map_prompt=map_prompt,
+            combine_prompt=combine_prompt,
+            verbose=True
+        )
+        
+        # Get condensed summary
+        condensed_result = chain.invoke({"input_documents": split_docs})
+        condensed_summary = condensed_result if isinstance(condensed_result, str) else condensed_result.get('output_text', '')
+        print(f"Condensed summary from {len(summary)} to {len(condensed_summary)} chars")
+    else:
+        condensed_summary = summary
+
+    prompt = f"""
+    You are a professional technical writer. Based on the following codebase summary, generate a complete README.md file. 
+    Include: 
+    - Project Title: Clear and descriptive
+    - Description: Overview of what the project does and its purpose
+    - Architecture: How the components work together (if applicable)
+    - Prerequisites: Required software, accounts, and configurations
+    - Installation: Step-by-step setup instructions
+    - Configuration: Environment variables, settings, and Azure-specific configurations
+    - Usage: How to use the software with examples
+    - API Reference: If the project exposes APIs (if applicable)
+    - Development: Instructions for contributors (if applicable)
+    - Deployment: How to deploy to Azure (if applicable)
+    - Security: Security considerations and best practices
+    - Troubleshooting: Common issues and solutions
+    - License: Project license information
+
+    Summary:
+    {condensed_summary}
+    """
+
+    try:
+        return llm.invoke(prompt)
+    except Exception as e:
+        if "maximum context length" in str(e):
+            # If still hitting token limits, use an even more aggressive approach
+            print("Still hitting token limits. Using more aggressive summarization.")
+            
+            # Use more aggressive summarization
+            from langchain.chains import LLMChain
+            
+            final_prompt = PromptTemplate(template="""
+            Create an extremely concise summary (maximum 500 words) of this codebase:
+            
+            {text}
+            
+            FOCUS ONLY on core functionality, main components, and technologies used.
+            """, input_variables=["text"])
+            
+            chain = LLMChain(llm=llm, prompt=final_prompt)
+            ultra_condensed = chain.invoke({"text": condensed_summary[:3000]})
+            
+            if isinstance(ultra_condensed, dict):
+                ultra_condensed = ultra_condensed.get('text', '')
+            
+            # Final attempt with ultra-condensed summary
+            minimal_prompt = f"""
+            Create a README.md for this project. Include only essential sections:
+            
+            Summary: {ultra_condensed}
+            """
+            return llm.invoke(minimal_prompt)
+        else:
+            raise
 
 def generate_readme_from_repo_url(github_url: str):
     repo_name = github_url.rstrip('/').split('/')[-1]
@@ -246,12 +358,12 @@ def generate_readme_from_repo_url(github_url: str):
     summary = summarize_code(code_text)
 
     ## For readme without examples.
-    #readme_content = generate_readme(summary)
+    readme_content = generate_readme(summary)
 
     # For readme with examples.
-    readme_content = generate_readme_with_examples_vectorstore(summary)
+    #readme_content = generate_readme_with_examples_vectorstore(summary)
 
-    with open(os.path.join(local_path, "GENERATED_README_2.md"), "w", encoding="utf-8") as f:
+    with open(os.path.join(local_path, "GENERATED_README.md"), "w", encoding="utf-8") as f:
         f.write(readme_content)
 
     print(f"\n✅ README generated at: {local_path}/GENERATED_README.md\n")
