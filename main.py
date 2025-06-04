@@ -217,26 +217,7 @@ Generate a complete, well-structured README.md following the sections above. If 
     return llm.invoke(prompt)
 
 def generate_readme(summary: str) -> str:
-#     prompt = f"""
-# You are a professional technical writer. Based on the following codebase summary, generate a complete README.md file. 
-# Include: 
-# - Project Title: Clear and descriptive
-# - Description: Overview of what the project does and its purpose
-# - Architecture: How the components work together (if applicable)
-# - Prerequisites: Required software, accounts, and configurations
-# - Installation: Step-by-step setup instructions
-# - Configuration: Environment variables, settings, and Azure-specific configurations
-# - Usage: How to use the software with examples
-# - API Reference: If the project exposes APIs (if applicable)
-# - Development: Instructions for contributors (if applicable)
-# - Deployment: How to deploy to Azure (if applicable)
-# - Security: Security considerations and best practices
-# - Troubleshooting: Common issues and solutions
-# - License: Project license information
 
-# Summary:
-# {summary}
-# """
     # Ensure summary is a string
     if not isinstance(summary, str):
         print(f"Warning: summary is not a string, but {type(summary)}. Converting to string.")
@@ -246,7 +227,8 @@ def generate_readme(summary: str) -> str:
         api_version=os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview"),
         azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT", "https://mcaupybugs-ai.openai.azure.com/"),
         api_key=api_key,
-        temperature=0.3
+        temperature=0.3,
+        max_tokens=1000
     )
 
     docs = [Document(page_content=summary)]
@@ -370,51 +352,9 @@ def generate_readme_from_repo_url(github_url: str):
     print("🔍 Preview:")
     print("-" * 60)
     print(readme_content[:1000])  # Show first 1000 characters
+    return readme_content
 
 # ---- Example Usage ----
 if __name__ == "__main__":
     repo_url = input("Enter GitHub repository URL: ")
     generate_readme_from_repo_url(repo_url)    # Get Azure OpenAI configuration from environment variables
-    api_key = os.getenv("AZURE_OPENAI_API_KEY")
-    
-    if not api_key:
-        raise ValueError("AZURE_OPENAI_API_KEY environment variable is not set.")
-    
-    # azure_endpoint = os.getenv("AZURE_OPENAI_ENDPOINT", "https://mcaupybugs-ai.openai.azure.com/")
-    # deployment = os.getenv("AZURE_OPENAI_DEPLOYMENT", "gpt-35-turbo-instruct")  # Use your actual deployment name
-    # api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2024-12-01-preview")
-
-    # client = AzureOpenAI(
-    #     api_version=api_version,
-    #     azure_endpoint=azure_endpoint,
-    #     api_key=api_key,
-    # )
-
-    # chat_prompt = [
-    #     {
-    #         "role": "system",
-    #         "content": "You are an AI assistant that helps people find information."
-    #     }
-    # ]
-
-    # # Include speech result if speech is enabled
-    # messages = chat_prompt
-
-    # completion = client.chat.completions.create(
-    #     model=deployment,  # Use the deployment name from environment variables
-    #     messages=messages,
-    #     max_tokens=800,
-    #     temperature=0.7,
-    #     top_p=0.95,
-    #     frequency_penalty=0,
-    #     presence_penalty=0,
-    #     stop=None,
-    #     stream=False
-    # )
-
-    # # Process the response
-    # if completion.choices:
-    #     response = completion.choices[0].message.content
-    #     print("Response:", response)
-    # else:
-    #     print("No response received from the model.")
