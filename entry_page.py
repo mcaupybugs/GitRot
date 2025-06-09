@@ -1,10 +1,6 @@
 import streamlit as st
 import datetime
-from main import (
-    generate_readme,
-    generate_readme_with_examples_vectorstore,
-    generate_readme_from_repo_url
-)
+from app import ReadmeGeneratorApp
 
 # Azure best practice: Initialize session state for persistent data
 if 'readme_content' not in st.session_state:
@@ -35,17 +31,12 @@ with st.sidebar:
             st.info(f"🕒 Generated: {st.session_state.generation_timestamp}")
 
 repo_url = st.text_input("Enter the repo URL : ")
-
+readme_generator_app = ReadmeGeneratorApp()
 # Generate README button
 if repo_url and st.button("Generate README"):
     with st.spinner("Processing repository with Azure OpenAI..."):
         try:
-            # Azure best practice: Track generation method
-            if generation_method == "Standard README":
-                readme_content = generate_readme_from_repo_url(repo_url)
-            else:
-                # Use vectorstore method if available
-                readme_content = generate_readme_from_repo_url(repo_url)  # You can modify this to use the vectorstore method
+            readme_content = readme_generator_app.generate_readme_from_repo_url(repo_url, generation_method)
             
             # Store in session state for persistence with proper timestamp
             st.session_state.readme_content = readme_content

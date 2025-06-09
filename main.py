@@ -11,6 +11,10 @@ from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import FAISS
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_core.prompts import PromptTemplate
+from gitrot_brain import GitrotBrain
+from helpers import Helper
+from generators import Generators
+
 # Load environment variables
 load_dotenv()
 
@@ -357,4 +361,18 @@ def generate_readme_from_repo_url(github_url: str):
 # ---- Example Usage ----
 if __name__ == "__main__":
     repo_url = input("Enter GitHub repository URL: ")
+    brain = GitrotBrain()
+    helper = Helper()
+    readme_generators = Generators()
+
+    llm = brain.getLLM()
+    embeddings = brain.getEmbeddingModel()
+    local_path = helper.clone_repo(repo_url)
+    code_text = helper.extract_code_from_repo(local_path)
+    summary = readme_generators.summarize_code(llm, code_text)
+    readme_content = readme_generators.generate_readme(llm, summary)
+
+    
+
+
     generate_readme_from_repo_url(repo_url)    # Get Azure OpenAI configuration from environment variables
