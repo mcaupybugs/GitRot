@@ -1,4 +1,5 @@
 import os
+import shutil
 from git import Repo
 
 class Helper:
@@ -27,3 +28,29 @@ class Helper:
             Repo.clone_from(github_url, folder_name)
             print(f"Repository cloned into '{folder_name}'")
         return folder_name
+    
+    def delete_cloned_repo(self, folder_path: str) -> bool:
+        """
+        Delete the cloned repository folder for cleanup after processing.
+        
+        Args:
+            folder_path (str): Path to the folder to be deleted
+            
+        Returns:
+            bool: True if deletion was successful, False otherwise
+        """
+        try:
+            if os.path.exists(folder_path):
+                # Use shutil.rmtree to remove the entire directory tree
+                shutil.rmtree(folder_path)
+                print(f"✅ Successfully deleted folder: {folder_path}")
+                return True
+            else:
+                print(f"⚠️ Folder not found: {folder_path}")
+                return False
+        except PermissionError as e:
+            print(f"❌ Permission denied when deleting {folder_path}: {e}")
+            return False
+        except Exception as e:
+            print(f"❌ Error deleting folder {folder_path}: {e}")
+            return False

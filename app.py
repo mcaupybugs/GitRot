@@ -11,7 +11,7 @@ class ReadmeGeneratorApp:
         self.llm = self.brain.getLLM()
         self.embeddings = self.brain.getEmbeddingModel()
 
-    def generate_readme_from_repo_url(self, github_url: str, generator_method: str == "Standard README" ):
+    def generate_readme_from_repo_url(self, github_url: str, generator_method: str = "Standard README"):
         repo_name = github_url.rstrip('/').split('/')[-1]
 
         local_path = self.helper.clone_repo(github_url, repo_name)
@@ -33,4 +33,12 @@ class ReadmeGeneratorApp:
         print("🔍 Preview:")
         print("-" * 60)
         print(readme_content[:1000])  # Show first 1000 characters
+        
+        # Cleanup: Delete the cloned repository folder
+        cleanup_success = self.helper.delete_cloned_repo(local_path)
+        if cleanup_success:
+            print("🧹 Cleanup completed successfully")
+        else:
+            print("⚠️ Warning: Could not clean up temporary files")
+        
         return readme_content
