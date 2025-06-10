@@ -1,0 +1,1 @@
+streamlit run entry_page.py --server.port $PORT --server.enableCORS false
