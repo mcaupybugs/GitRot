@@ -1,6 +1,59 @@
 import os
 import shutil
 from git import Repo
+import subprocess
+import logging
+
+# Azure best practice: Configure logging for deployment monitoring
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
+def configure_git_for_azure():
+    """Configure Git for Azure App Service deployment."""
+    try:
+        # Azure best practice: Set Git environment variables
+        os.environ['GIT_PYTHON_REFRESH'] = 'quiet'
+        
+        # Check if git is available
+        try:
+            git_path = subprocess.check_output(['which', 'git'], text=True).strip()
+            os.environ['GIT_PYTHON_GIT_EXECUTABLE'] = git_path
+            logger.info(f"✅ Azure: Git found at {git_path}")
+            
+            # Verify git version
+            git_version = subprocess.check_output(['git', '--version'], text=True).strip()
+            logger.info(f"✅ Azure: {git_version}")
+            
+        except subprocess.CalledProcessError:
+            logger.warning("⚠️ Azure: Git not found in PATH")
+            
+            # Azure fallback: Try common Git paths
+            common_git_paths = [
+                '/usr/bin/git',
+                '/usr/local/bin/git',
+                '/opt/git/bin/git',
+                '/home/site/wwwroot/.venv/bin/git'
+            ]
+            for git_path in common_git_paths:
+                if os.path.exists(git_path):
+                    os.environ['GIT_PYTHON_GIT_EXECUTABLE'] = git_path
+                    logger.info(f"✅ Azure: Git configured at {git_path}")
+                    break
+            else:
+                logger.error("❌ Azure: Git executable not found")
+                return False
+                
+        return True
+        
+    except Exception as e:
+        logger.error(f"❌ Azure Git configuration error: {str(e)}")
+        return False
+
+# Azure deployment: Configure Git before imports
+git_configured = configure_git_for_azure()
+
 
 class Helper:
     def extract_code_from_repo(self, folder_name: str)-> str:
