@@ -2,6 +2,8 @@ import streamlit as st
 import datetime
 from app import ReadmeGeneratorApp
 
+ADSENSE_PUBLISHER_ID = "ca-pub-5478826702170077"
+
 # Configure Streamlit page layout for wide mode
 st.set_page_config(
     page_title="GitRot - README Generator",
@@ -9,6 +11,16 @@ st.set_page_config(
     layout="wide",  # This is key for utilizing full width
     initial_sidebar_state="expanded"
 )
+
+st.markdown(f"""
+<head>
+    <meta name="google-adsense-account" content="{ADSENSE_PUBLISHER_ID}">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="GitRot - AI-powered README generator using Azure OpenAI. Generate professional documentation for your GitHub repositories instantly.">
+    <meta name="keywords" content="README generator, AI documentation, Azure OpenAI, GitHub, GitRot">
+    <meta name="author" content="GitRot Team">
+</head>
+""", unsafe_allow_html=True)
 
 # Custom CSS for wide layout with visible ad column
 st.markdown("""
