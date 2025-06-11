@@ -1,12 +1,10 @@
 #!/bin/bash
+# Azure App Service startup script for GitRot with Git installation
 
-# GitRot FastAPI Azure App Service Startup Script
-# Azure best practice: Enhanced startup with proper error handling and logging
+echo "🔵 Azure App Service: GitRot Startup Configuration"
 
-echo "🚀 Starting GitRot FastAPI Application..."
-
-# Set working directory
-cd /home/site/wwwroot
+# Azure best practice: Update package lists
+apt-get update -q
 
 # Azure deployment: Install Git
 echo "📦 Installing Git on Azure App Service..."
@@ -28,36 +26,7 @@ else
     exit 1
 fi
 
-# Set Git executable path for Azure App Service
-export PATH="/usr/bin:/opt/python/3.9.19/bin:$PATH"
-
-# Azure best practice: Set environment variables for production
-export PYTHONPATH="/home/site/wwwroot:$PYTHONPATH"
-export PYTHONUNBUFFERED=1
-
-# Azure best practice: Configure logging
-export UVICORN_LOG_LEVEL=info
-
-# Azure best practice: Install/upgrade pip and dependencies
-echo "📦 Installing Python dependencies..."
-python3 -m pip install --upgrade pip --no-cache-dir
-python3 -m pip install -r requirements.txt --no-cache-dir
-
-# Azure best practice: Create necessary directories if they don't exist
-mkdir -p templates static
-
-# Azure best practice: Check if required files exist
-if [ ! -f "fastapi_app.py" ]; then
-    echo "❌ Error: fastapi_app.py not found"
-    exit 1
-fi
-
-if [ ! -f "templates/home_page.html" ]; then
-    echo "❌ Error: templates/home_page.html not found"
-    exit 1
-fi
-
-echo "✅ Git configured and files verified"
+pip install -r requirements.txt
 
 # Azure best practice: Start the FastAPI application with proper configuration
 echo "🌐 Starting FastAPI server..."
