@@ -101,13 +101,8 @@ with ad_col:
         <p style='color: #bf360c; font-weight: bold;'>Google AdSense will load here</p>
         
         <!-- Test Ad Unit - for development -->
-<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js"></script>
-<!-- Test Ad -->
-<ins class="adsbygoogle"
-     style="display:block"
-     data-ad-client="ca-pub-XXXXXXXXXXXXXXXX"
-     data-ad-slot="1234567890"
-     data-ad-format="auto"></ins>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5478826702170077"
+     crossorigin="anonymous"></script>
 <script>
      (adsbygoogle = window.adsbygoogle || []).push({});
 </script>
