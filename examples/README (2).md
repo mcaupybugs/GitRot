@@ -25,7 +25,7 @@ zeplin connect [options]
 ```
 
 | Options      | Description                                       | Default                 |
-|--------------|---------------------------------------------------|-------------------------|
+| ------------ | ------------------------------------------------- | ----------------------- |
 | -f, --file   | Path to components configuration file             | .zeplin/components.json |
 | -d, --dev    | Activate development mode                         | false                   |
 | --no-watch   | Disable watching file changes on development mode | false                   |
@@ -44,7 +44,7 @@ Zeplin CLI commands are extensible using plugins. See [PLUGIN.md](./PLUGIN.md) t
 #### Available plugins
 
 | npm package name                                                                               | Description                                       |
-|------------------------------------------------------------------------------------------------|---------------------------------------------------|
+| ---------------------------------------------------------------------------------------------- | ------------------------------------------------- |
 | [@zeplin/cli-connect-react-plugin](https://github.com/zeplin/cli-connect-react-plugin)         | Generates snippets from React components          |
 | [@zeplin/cli-connect-angular-plugin](https://github.com/zeplin/cli-connect-angular-plugin)     | Generate snippets from Angular components         |
 | [@zeplin/cli-connect-swift-plugin](https://github.com/zeplin/cli-connect-swift-plugin)         | Generates snippets from iOS, macOS views in Swift |
