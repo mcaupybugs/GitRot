@@ -108,21 +108,6 @@ class Generators:
     2. Focus ONLY on relevant content from the summary - ignore CSS, HTML styling, and other non-documentation elements
     3. Follow Azure documentation standards and conventions
 
-    The README MUST include these sections:
-    - Project Title: Clear and descriptive
-    - Description: Overview of what the project does and its purpose
-    - Architecture: How the components work together (if applicable)
-    - Prerequisites: Required software, accounts, and configurations
-    - Installation: Step-by-step setup instructions
-    - Configuration: Environment variables, settings, and Azure-specific configurations
-    - Usage: How to use the software with examples
-    - API Reference: If the project exposes APIs (if applicable)
-    - Development: Instructions for contributors (if applicable)
-    - Deployment: How to deploy to Azure (if applicable)
-    - Security: Security considerations and best practices
-    - Troubleshooting: Common issues and solutions
-    - License: Project license information
-
     REFERENCE EXAMPLES:
     {relevant_content}
 
