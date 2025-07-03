@@ -13,16 +13,14 @@ class ReadmeGeneratorApp:
 
     def generate_readme_from_repo_url(self, github_url: str, generator_method: str = "Standard README"):
         repo_name = github_url.rstrip('/').split('/')[-1]
-
         local_path = self.helper.clone_repo(github_url, repo_name)
         code_text = self.helper.extract_code_from_repo(local_path)
         summary = self.generator.summarize_code(self.llm, code_text)
-
         ## For readme without examples.
         if generator_method == "Standard README":
             readme_content = self.generator.generate_readme(self.llm, summary)
         elif generator_method == "README with Examples":
-            readme_content = self.generator.generate_readme_with_examples_vectorstore(self.llm, self.embeddings, summary)
+            readme_content = self.generator.generate_readme_with_examples_vectorstore(self.llm, self.embeddings, summary)   
         # For readme with examples.
         #readme_content = generate_readme_with_examples_vectorstore(summary)
 
