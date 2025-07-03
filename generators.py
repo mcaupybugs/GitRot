@@ -82,17 +82,62 @@ class Generators:
         # Create vector store from examples
         vectorstore = FAISS.from_documents(example_docs, embeddings)
 
-        # Truncate summary to reasonable size
-        summary_truncated = summary[:800] if len(summary) > 800 else summary
+        # Systematically condense summary if too large
+        if len(summary) > 800:
+            text_splitter = RecursiveCharacterTextSplitter(
+                chunk_size=600,
+                chunk_overlap=100,
+                separators=["\n\n", "\n", ". ", " ", ""]
+            )
+            summary_docs = [Document(page_content=summary)]
+            split_docs = text_splitter.split_documents(summary_docs)
+            
+            condense_prompt = PromptTemplate(
+                template="""Condense this portion of a codebase summary while preserving key technical details:
+                
+                {text}
+                
+                Keep all important: functionality, technologies, architecture, and key components.
+                Condensed summary:""",
+                input_variables=["text"]
+            )
+            
+            chain = load_summarize_chain(
+                llm,
+                chain_type="map_reduce",
+                map_prompt=condense_prompt,
+                combine_prompt=PromptTemplate(
+                    template="Combine these condensed summaries into a comprehensive overview:\n\n{text}\n\nFinal summary:",
+                    input_variables=["text"]
+                )
+            )
+            
+            condensed_result = chain.invoke({"input_documents": split_docs})
+            summary_for_search = condensed_result['output_text'] if isinstance(condensed_result, dict) else str(condensed_result)
+        else:
+            summary_for_search = summary
 
+        print("summary for searchy", summary_for_search)
         # Retrieve most relevant examples for this summary
-        relevant_examples = vectorstore.similarity_search(summary_truncated, k=2)
-        relevant_content = "\n\n".join([f"### Example from {doc.metadata['source']}\n\n{doc.page_content}" 
-                                      for doc in relevant_examples])
-
-        # Truncate if still too large
-        if len(relevant_content) > 2000:
-            relevant_content = relevant_content[:2000] + "...(truncated)"
+        relevant_examples = vectorstore.similarity_search(summary_for_search, k=2)
+        # Systematically process example content
+        processed_examples = []
+        for doc in relevant_examples:
+            example_content = doc.page_content
+            if len(example_content) > 1000:
+                # Use text splitter to get most relevant sections
+                example_splitter = RecursiveCharacterTextSplitter(
+                    chunk_size=800,
+                    chunk_overlap=100,
+                    separators=["\n## ", "\n### ", "\n\n", "\n", ""]
+                )
+                example_chunks = example_splitter.split_text(example_content)
+                # Take first chunk (usually contains title and description)
+                example_content = example_chunks[0]
+            
+            processed_examples.append(f"### Example from {doc.metadata['source']}\n\n{example_content}")
+        
+        relevant_content = "\n\n".join(processed_examples)
 
         # Create LangChain Azure OpenAI instance
 
@@ -108,26 +153,11 @@ class Generators:
     2. Focus ONLY on relevant content from the summary - ignore CSS, HTML styling, and other non-documentation elements
     3. Follow Azure documentation standards and conventions
 
-    The README MUST include these sections:
-    - Project Title: Clear and descriptive
-    - Description: Overview of what the project does and its purpose
-    - Architecture: How the components work together (if applicable)
-    - Prerequisites: Required software, accounts, and configurations
-    - Installation: Step-by-step setup instructions
-    - Configuration: Environment variables, settings, and Azure-specific configurations
-    - Usage: How to use the software with examples
-    - API Reference: If the project exposes APIs (if applicable)
-    - Development: Instructions for contributors (if applicable)
-    - Deployment: How to deploy to Azure (if applicable)
-    - Security: Security considerations and best practices
-    - Troubleshooting: Common issues and solutions
-    - License: Project license information
-
     REFERENCE EXAMPLES:
     {relevant_content}
 
     CODEBASE SUMMARY:
-    {summary_truncated}
+    {summary_for_search}
 
     Generate a complete, well-structured README.md following the sections above. If any section is not applicable based on the summary, you may omit it. Focus on technical accuracy and clarity.
     """
