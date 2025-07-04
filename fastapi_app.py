@@ -4,9 +4,8 @@ Azure-optimized README generator with native HTML and AdSense integration
 """
 
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
-from fastapi.staticfiles import StaticFiles
-from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel
 import logging
 import datetime
@@ -39,14 +38,18 @@ app = FastAPI(
     redoc_url="/api/redoc"
 )
 
-# Mount static files for CSS/JS
-try:
-    app.mount("/static", StaticFiles(directory="static"), name="static")
-except RuntimeError:
-    logger.warning("Static directory not found, continuing without static files")
-
-# Azure best practice: Use templates for HTML rendering
-templates = Jinja2Templates(directory="templates")
+# Add CORS middleware for frontend integration
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[
+        "http://localhost:3000",  # Next.js dev server
+        "http://127.0.0.1:3000",
+        "https://gitrot.vercel.app",  # Add your production domain when deployed
+    ],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "PUT", "DELETE"],
+    allow_headers=["*"],
+)
 
 # Pydantic models for API requests
 class ReadmeRequest(BaseModel):
