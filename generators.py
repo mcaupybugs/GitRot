@@ -81,7 +81,6 @@ class Generators:
 
         # Create vector store from examples
         vectorstore = FAISS.from_documents(example_docs, embeddings)
-
         # Systematically condense summary if too large
         if len(summary) > 800:
             text_splitter = RecursiveCharacterTextSplitter(
