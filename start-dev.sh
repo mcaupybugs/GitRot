@@ -1,13 +1,19 @@
 #!/bin/bash
 
-# GitRot Development Startup Script
-echo "🚀 Starting GitRot Development Environment..."
+# GitRot Development Startup Script (with UV)
+echo "🚀 Starting GitRot Development Environment with UV..."
 
 # Start FastAPI backend
 echo "📡 Starting FastAPI backend on port 8000..."
 cd /Users/vishalyadav/PersonalCode/GitRot
-source gitrot/bin/activate
-python fastapi_app.py &
+
+# Use UV if available, otherwise fall back to virtualenv
+if command -v uv &> /dev/null; then
+    uv run python fastapi_app.py &
+else
+    source gitrot/bin/activate
+    python fastapi_app.py &
+fi
 BACKEND_PID=$!
 
 # Wait a moment for backend to start

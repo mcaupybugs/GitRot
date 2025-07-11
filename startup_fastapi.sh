@@ -1,7 +1,8 @@
 #!/bin/bash
 # Azure App Service startup script for GitRot with Git installation
+# Uses UV for faster Python dependency management with pip fallback
 
-echo "🔵 Azure App Service: GitRot Startup Configuration"
+echo "🔵 Azure App Service: GitRot Startup Configuration (with UV)"
 
 # Azure best practice: Update package lists
 apt-get update -q
@@ -26,21 +27,48 @@ else
     exit 1
 fi
 
-pip install -r requirements.txt
+# Install UV if not available
+if ! command -v uv &> /dev/null; then
+    echo "⚡ Installing UV package manager..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    source $HOME/.cargo/env
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
+echo "🐍 Installing Python dependencies with UV..."
+uv sync --frozen || {
+    echo "❌ Failed to install Python dependencies with UV, falling back to pip..."
+    pip install -r requirements.txt || {
+        echo "❌ Failed to install Python dependencies"
+        exit 1
+    }
+}
 
 # Azure best practice: Start the FastAPI application with proper configuration
-echo "🌐 Starting FastAPI server..."
+echo "🌐 Starting FastAPI server with UV..."
 
 # Use the PORT environment variable set by Azure, default to 8000
 PORT=${PORT:-8000}
 
-# Start Uvicorn with production settings
-uvicorn fastapi_app:app \
-    --host 0.0.0.0 \
-    --port $PORT \
-    --workers 1 \
-    --log-level info \
-    --access-log \
-    --no-use-colors
+# Try to use UV first, fallback to direct uvicorn if UV not available
+if command -v uv &> /dev/null; then
+    # Start Uvicorn with UV and production settings
+    uv run uvicorn fastapi_app:app \
+        --host 0.0.0.0 \
+        --port $PORT \
+        --workers 1 \
+        --log-level info \
+        --access-log \
+        --no-use-colors
+else
+    # Fallback to direct uvicorn
+    uvicorn fastapi_app:app \
+        --host 0.0.0.0 \
+        --port $PORT \
+        --workers 1 \
+        --log-level info \
+        --access-log \
+        --no-use-colors
+fi
 
 echo "🎯 GitRot FastAPI application started on port $PORT"

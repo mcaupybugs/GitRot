@@ -1,8 +1,8 @@
 #!/bin/bash
 # Optimized Azure App Service startup for GitRot (FastAPI + Next.js)
-# Simplified version that handles Azure constraints better
+# Uses UV for faster Python dependency management with pip fallback
 
-echo "🔵 Azure App Service: GitRot Optimized Startup"
+echo "🔵 Azure App Service: GitRot Optimized Startup (with UV)"
 
 # Install system dependencies with error handling
 echo "📦 Installing system dependencies..."
@@ -31,6 +31,7 @@ echo "✅ Dependencies verified:"
 echo "   Git: $(git --version 2>/dev/null || echo 'Not available')"
 echo "   Node: $(node --version 2>/dev/null || echo 'Not available')"
 echo "   npm: $(npm --version 2>/dev/null || echo 'Not available')"
+echo "   UV: $(uv --version 2>/dev/null || echo 'Not available')"
 
 # Set Git environment variables
 export GIT_PYTHON_REFRESH=quiet
@@ -42,11 +43,22 @@ export PORT
 
 echo "🌐 Using port: $PORT"
 
-# Install Python dependencies
-echo "🐍 Installing Python backend dependencies..."
-pip install -r requirements.txt || {
-    echo "❌ Failed to install Python dependencies"
-    exit 1
+# Install UV if not available
+if ! command -v uv &> /dev/null; then
+    echo "⚡ Installing UV package manager..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    source $HOME/.cargo/env
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
+# Install Python dependencies using UV
+echo "🐍 Installing Python backend dependencies with UV..."
+uv sync --frozen || {
+    echo "❌ Failed to install Python dependencies with UV, falling back to pip..."
+    pip install -r requirements.txt || {
+        echo "❌ Failed to install Python dependencies"
+        exit 1
+    }
 }
 
 # Handle Next.js frontend
@@ -109,17 +121,34 @@ with open('fastapi_app.py', 'w') as f:
 print(f"✅ CORS updated for Azure hostname: {azure_hostname}")
 EOF
 
-python update_cors.py 2>/dev/null || echo "⚠️ CORS update skipped"
+# Use UV if available, otherwise fall back to python
+if command -v uv &> /dev/null; then
+    uv run python update_cors.py 2>/dev/null || echo "⚠️ CORS update skipped"
+else
+    python update_cors.py 2>/dev/null || echo "⚠️ CORS update skipped"
+fi
 
 # For Azure App Service, we need to run only the backend
 # Frontend will be served as static files or separate service
-echo "🚀 Starting FastAPI application..."
+echo "🚀 Starting FastAPI application with UV..."
 
-# Azure App Service expects the main process to run in foreground
-exec uvicorn fastapi_app:app \
-    --host 0.0.0.0 \
-    --port $PORT \
-    --workers 1 \
-    --log-level info \
-    --access-log \
-    --no-use-colors
+# Try to use UV first, fallback to direct uvicorn if UV not available
+if command -v uv &> /dev/null; then
+    # Azure App Service expects the main process to run in foreground
+    exec uv run uvicorn fastapi_app:app \
+        --host 0.0.0.0 \
+        --port $PORT \
+        --workers 1 \
+        --log-level info \
+        --access-log \
+        --no-use-colors
+else
+    # Fallback to direct uvicorn
+    exec uvicorn fastapi_app:app \
+        --host 0.0.0.0 \
+        --port $PORT \
+        --workers 1 \
+        --log-level info \
+        --access-log \
+        --no-use-colors
+fi

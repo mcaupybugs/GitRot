@@ -1,8 +1,9 @@
 #!/bin/bash
 # Azure App Service startup script for GitRot Full-Stack (FastAPI + Next.js)
 # This script handles both backend and frontend deployment on Azure
+# Uses UV for faster Python dependency management with pip fallback
 
-echo "🔵 Azure App Service: GitRot Full-Stack Startup Configuration"
+echo "🔵 Azure App Service: GitRot Full-Stack Startup Configuration (with UV)"
 echo "📦 Backend: FastAPI + 🎨 Frontend: Next.js"
 
 # Azure best practice: Update package lists
@@ -37,9 +38,23 @@ else
     exit 1
 fi
 
+# Install UV if not available
+if ! command -v uv &> /dev/null; then
+    echo "⚡ Installing UV package manager..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    source $HOME/.cargo/env
+    export PATH="$HOME/.local/bin:$PATH"
+fi
+
 # Install Python dependencies (Backend)
-echo "🐍 Installing Python dependencies for FastAPI backend..."
-pip install -r requirements.txt
+echo "🐍 Installing Python dependencies for FastAPI backend with UV..."
+uv sync --frozen || {
+    echo "❌ Failed to install Python dependencies with UV, falling back to pip..."
+    pip install -r requirements.txt || {
+        echo "❌ Failed to install Python dependencies"
+        exit 1
+    }
+}
 
 # Install and build Next.js frontend
 echo "🎨 Setting up Next.js frontend..."
