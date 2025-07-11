@@ -18,6 +18,23 @@ echo "📦 Installing Node.js and npm..."
 curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
 apt-get install -y nodejs
 
+# Verify Node.js version - Next.js 15 requires Node.js 18.18+
+echo "🔍 Verifying Node.js version..."
+node_version=$(node -v)
+echo "📦 Node.js version: $node_version"
+
+# Check if Node.js version is compatible (18.18+)
+node_major=$(echo $node_version | cut -d'.' -f1 | sed 's/v//')
+node_minor=$(echo $node_version | cut -d'.' -f2)
+
+if [ "$node_major" -lt 18 ] || ([ "$node_major" -eq 18 ] && [ "$node_minor" -lt 18 ]); then
+    echo "❌ Node.js version $node_version is too old. Next.js 15 requires Node.js 18.18+"
+    echo "📦 Installing latest Node.js LTS..."
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | bash -
+    apt-get install -y nodejs
+    echo "📦 Updated Node.js version: $(node -v)"
+fi
+
 # Verify installations
 echo "🔍 Verifying installations..."
 if command -v git &> /dev/null; then
@@ -51,13 +68,27 @@ if [[ ! -f "package.json" ]]; then
     exit 1
 fi
 
+# Clean install to ensure consistency
+echo "🧹 Cleaning previous installs..."
+rm -rf node_modules
+rm -f package-lock.json
+
 # Install frontend dependencies
 echo "📦 Installing frontend dependencies..."
-npm ci --production=false
+npm install
 
 # Build the Next.js application
 echo "🏗️ Building Next.js application..."
-npm run build
+echo "🔍 Environment info - Node.js: $(node -v), NPM: $(npm -v)"
+
+NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production npm run build
+
+if [ $? -ne 0 ]; then
+    echo "❌ Frontend build failed"
+    exit 1
+fi
+
+echo "✅ Frontend build completed successfully!"
 
 # Return to root directory
 cd ..
