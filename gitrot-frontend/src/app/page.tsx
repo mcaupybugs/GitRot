@@ -13,7 +13,6 @@ import {
   ArrowRight,
   Copy,
   Download,
-  AlertCircle,
   CheckCircle,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
