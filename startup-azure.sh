@@ -1,8 +1,8 @@
 #!/bin/bash
-# Simplified Azure App Service startup for GitRot
-# Frontend is pre-built during GitHub Actions deployment
+# Azure App Service startup for GitRot
+# Builds frontend during deployment with timeout protection
 
-echo "🔵 Azure App Service: GitRot Quick Startup"
+echo "🔵 Azure App Service: GitRot Startup with Frontend Build"
 
 # Set production environment
 export NODE_ENV=production
@@ -14,29 +14,59 @@ export PORT
 
 echo "🌐 Using port: $PORT"
 
-# Basic system setup (if needed)
+# Install system dependencies quickly
+echo "📦 Installing system dependencies..."
+apt-get update -q >/dev/null 2>&1 || echo "⚠️ Package update skipped"
+apt-get install -y git curl nodejs npm >/dev/null 2>&1 || echo "⚠️ Some packages may already be installed"
+
+# Verify Node.js version
 echo "🔍 Environment check..."
 echo "   Python: $(python3 --version 2>/dev/null || echo 'Not available')"
 echo "   Node: $(node --version 2>/dev/null || echo 'Not available')"
+echo "   NPM: $(npm --version 2>/dev/null || echo 'Not available')"
 
-# Install Python dependencies (required for Azure runtime)
+# Install Python dependencies
 echo "🐍 Installing Python dependencies..."
 pip install -r requirements.txt || {
     echo "❌ Failed to install Python dependencies"
     exit 1
 }
 
-# Set Git environment variables (if git operations are needed)
-export GIT_PYTHON_REFRESH=quiet
-if command -v git &> /dev/null; then
-    export GIT_PYTHON_GIT_EXECUTABLE=$(which git)
-fi
-
-# Check if frontend build exists (built by GitHub Actions)
-if [[ -d "gitrot-frontend/.next" ]]; then
-    echo "✅ Frontend build found - ready to serve"
+# Build frontend with timeout protection
+echo "🎨 Building frontend with timeout protection..."
+if [[ -d "gitrot-frontend" ]]; then
+    cd gitrot-frontend
+    
+    # Quick dependency install
+    echo "📦 Installing frontend dependencies..."
+    timeout 90 npm ci --prefer-offline --no-audit --no-fund >/dev/null 2>&1 || {
+        echo "⚠️ Fast install failed, trying npm install..."
+        timeout 120 npm install >/dev/null 2>&1 || {
+            echo "❌ Frontend dependency install failed"
+            cd ..
+            echo "⚠️ Continuing with backend only"
+            frontend_available=false
+        }
+    }
+    
+    if [[ "$frontend_available" != "false" ]]; then
+        # Build with strict timeout
+        echo "🏗️ Building Next.js application..."
+        timeout 150 npm run build >/dev/null 2>&1 || {
+            echo "❌ Frontend build timed out or failed"
+            cd ..
+            echo "⚠️ Continuing with backend only"
+            frontend_available=false
+        }
+    fi
+    
+    cd ..
+    
+    if [[ "$frontend_available" != "false" ]]; then
+        echo "✅ Frontend build completed"
+    fi
 else
-    echo "⚠️ Frontend build not found - running backend only"
+    echo "⚠️ Frontend directory not found"
 fi
 
 # Update FastAPI CORS for Azure

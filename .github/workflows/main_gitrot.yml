@@ -1,8 +1,7 @@
-# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
-# More GitHub Actions for Azure: https://github.com/Azure/actions
-# More info on Python, GitHub Actions, and Azure App Service: https://aka.ms/python-webapps-actions
+# CI workflow for GitRot - Azure uses continuous deployment
+# This workflow runs tests and validation only
 
-name: Build Python app with Next.js frontend for Azure Web App - gitrot
+name: CI for GitRot
 
 on:
   push:
@@ -11,10 +10,10 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
+  test:
     runs-on: ubuntu-latest
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -44,7 +43,7 @@ jobs:
           cd gitrot-frontend
           npm ci --prefer-offline --no-audit --no-fund
 
-      - name: Build frontend
+      - name: Test frontend build
         run: |
           cd gitrot-frontend
           NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production npm run build
