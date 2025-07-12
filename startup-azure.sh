@@ -9,11 +9,28 @@ echo "📦 Installing system dependencies..."
 apt-get update -q 2>/dev/null || echo "⚠️ Package update skipped"
 apt-get install -y git curl 2>/dev/null || echo "⚠️ System packages may already be installed"
 
-# Install Node.js 20 (LTS)
+# Install Node.js 20 (LTS) with version verification
 if ! command -v node &> /dev/null; then
     echo "📦 Installing Node.js..."
     curl -fsSL https://deb.nodesource.com/setup_20.x | bash - 2>/dev/null
     apt-get install -y nodejs 2>/dev/null
+fi
+
+# Verify Node.js version - Next.js 15 requires Node.js 18.18+
+echo "🔍 Verifying Node.js version..."
+node_version=$(node -v)
+echo "📦 Node.js version: $node_version"
+
+# Check if Node.js version is compatible (18.18+)
+node_major=$(echo $node_version | cut -d'.' -f1 | sed 's/v//')
+node_minor=$(echo $node_version | cut -d'.' -f2)
+
+if [ "$node_major" -lt 18 ] || ([ "$node_major" -eq 18 ] && [ "$node_minor" -lt 18 ]); then
+    echo "❌ Node.js version $node_version is too old. Next.js 15 requires Node.js 18.18+"
+    echo "📦 Installing latest Node.js LTS..."
+    curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - 2>/dev/null
+    apt-get install -y nodejs 2>/dev/null
+    echo "📦 Updated Node.js version: $(node -v)"
 fi
 
 # Verify critical dependencies
@@ -36,6 +53,10 @@ echo "   npm: $(npm --version 2>/dev/null || echo 'Not available')"
 export GIT_PYTHON_REFRESH=quiet
 export GIT_PYTHON_GIT_EXECUTABLE=$(which git)
 
+# Set production environment early
+export NODE_ENV=production
+export NEXT_TELEMETRY_DISABLED=1
+
 # Azure port configuration
 PORT=${PORT:-8000}
 export PORT
@@ -54,19 +75,46 @@ if [[ -d "gitrot-frontend" ]]; then
     echo "🎨 Setting up Next.js frontend..."
     cd gitrot-frontend
     
-    # Install dependencies
-    echo "📦 Installing frontend dependencies..."
-    npm ci --only=production 2>/dev/null || npm install
-    
-    # Build the application
-    echo "🏗️ Building Next.js application..."
-    npm run build || {
-        echo "❌ Frontend build failed"
-        exit 1
-    }
-    
-    cd ..
-    echo "✅ Frontend build completed"
+    # Check if package.json exists
+    if [[ ! -f "package.json" ]]; then
+        echo "❌ package.json not found in gitrot-frontend directory"
+        cd ..
+        echo "⚠️ Skipping frontend build, running backend only"
+    else
+        # Check if build already exists (pre-built)
+        if [[ -d ".next" ]]; then
+            echo "✅ Frontend build already exists, skipping build process"
+        else
+            # For Azure App Service, we need to optimize the build process
+            echo "🏗️ Starting optimized frontend build for Azure..."
+            echo "🔍 Environment info - Node.js: $(node -v), NPM: $(npm -v)"
+            
+            # Use npm ci for faster, reproducible builds
+            echo "📦 Installing frontend dependencies (fast mode)..."
+            timeout 60 npm ci --prefer-offline --no-audit --no-fund --silent || {
+                echo "⚠️ Fast install failed, trying regular install..."
+                timeout 90 npm install --silent || {
+                    echo "❌ Could not install frontend dependencies"
+                    cd ..
+                    echo "⚠️ Running backend only due to frontend setup failure"
+                    return 0
+                }
+            }
+            
+            # Build with optimizations for Azure
+            echo "🏗️ Building Next.js application (optimized)..."
+            # Set build timeout and use faster build options
+            NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production NODE_OPTIONS="--max-old-space-size=1024" timeout 120 npm run build:fast || {
+                echo "❌ Frontend build failed or timed out"
+                cd ..
+                echo "⚠️ Running backend only due to build failure"
+                return 0
+            }
+        fi
+        
+        cd ..
+        echo "✅ Frontend setup completed!"
+    fi
 else
     echo "⚠️ Frontend directory not found, running backend only"
 fi
@@ -111,9 +159,8 @@ EOF
 
 python update_cors.py 2>/dev/null || echo "⚠️ CORS update skipped"
 
-# For Azure App Service, we need to run only the backend
-# Frontend will be served as static files or separate service
-echo "🚀 Starting FastAPI application..."
+# Start the backend immediately to avoid Azure timeout
+echo "🚀 Starting FastAPI application (quick start mode)..."
 
 # Azure App Service expects the main process to run in foreground
 exec uvicorn fastapi_app:app \

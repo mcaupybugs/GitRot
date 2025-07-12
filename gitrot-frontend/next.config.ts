@@ -4,12 +4,12 @@ import path from "path";
 const nextConfig: NextConfig = {
   /* config options here */
   experimental: {
-    // Ensure stable builds
-    forceSwcTransforms: true,
+    // Optimize build performance
+    optimizePackageImports: ['lucide-react'],
   },
   
   // Ensure proper module resolution
-  webpack: (config) => {
+  webpack: (config, { dev }) => {
     // Ensure proper module resolution for @/ aliases
     config.resolve.alias = {
       ...config.resolve.alias,
@@ -18,8 +18,30 @@ const nextConfig: NextConfig = {
       '@/components': path.resolve(process.cwd(), 'src/components'),
     };
     
-    // Ensure consistent builds
-    config.cache = false;
+    // Optimize for faster builds in production
+    if (!dev) {
+      // Reduce bundle analysis time
+      config.optimization = {
+        ...config.optimization,
+        minimize: true,
+        // Faster builds with smaller chunks
+        splitChunks: {
+          chunks: 'all',
+          cacheGroups: {
+            default: {
+              minChunks: 1,
+              priority: -20,
+              reuseExistingChunk: true,
+            },
+            vendors: {
+              test: /[\\/]node_modules[\\/]/,
+              priority: -10,
+              reuseExistingChunk: true,
+            },
+          },
+        },
+      };
+    }
     
     // Additional resolve options for better compatibility
     config.resolve.extensions = ['.tsx', '.ts', '.jsx', '.js', '.json'];
@@ -29,6 +51,9 @@ const nextConfig: NextConfig = {
   
   // Output configuration for better Azure compatibility
   output: 'standalone',
+  
+  // Disable source maps in production for faster builds
+  productionBrowserSourceMaps: false,
 };
 
 export default nextConfig;
