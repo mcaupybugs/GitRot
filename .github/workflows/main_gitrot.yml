@@ -1,7 +1,7 @@
-# CI workflow for GitRot - Azure uses continuous deployment
-# This workflow runs tests and validation only
+# GitHub Actions build for Azure App Service - GitRot
+# Azure automatically deploys when this workflow completes
 
-name: CI for GitRot
+name: Build GitRot for Azure App Service
 
 on:
   push:
@@ -10,10 +10,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
 
     steps:
       - uses: actions/checkout@v4
@@ -43,7 +41,7 @@ jobs:
           cd gitrot-frontend
           npm ci --prefer-offline --no-audit --no-fund
 
-      - name: Test frontend build
+      - name: Build frontend
         run: |
           cd gitrot-frontend
           NEXT_TELEMETRY_DISABLED=1 NODE_ENV=production npm run build
