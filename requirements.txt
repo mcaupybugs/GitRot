@@ -35,6 +35,7 @@ langchain-community==0.3.24
 langchain-core==0.3.63
 langchain-openai==0.3.18
 langchain-text-splitters==0.3.8
+langchain-google-genai
 langsmith==0.3.43
 MarkupSafe==3.0.2
 marshmallow==3.26.1
