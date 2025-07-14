@@ -1,0 +1,111 @@
+# GitRot Development Dockerfile
+# Optimized for development with hot reload capabilities
+
+FROM node:20-alpine AS frontend-builder
+
+WORKDIR /app/gitrot-frontend
+
+# Copy package files
+COPY gitrot-frontend/package*.json ./
+
+# Install all dependencies (including dev dependencies)
+RUN npm install
+
+# Python development image
+FROM python:3.11-slim AS development
+
+# Install system dependencies with improved error handling
+RUN apt-get update --allow-releaseinfo-change \
+    && apt-get install -y --no-install-recommends \
+    git \
+    curl \
+    supervisor \
+    ca-certificates \
+    gnupg \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* \
+    && curl -fsSL https://deb.nodesource.com/gpgkey/nodesource-repo.gpg.key | gpg --dearmor -o /usr/share/keyrings/nodesource.gpg \
+    && echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_20.x nodistro main" > /etc/apt/sources.list.d/nodesource.list \
+    && apt-get update \
+    && apt-get install -y --no-install-recommends nodejs \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* \
+    && npm install -g npm@latest
+
+# Create app directory
+WORKDIR /app
+
+# Copy and install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy Node.js dependencies from frontend-builder
+COPY --from=frontend-builder /app/gitrot-frontend/node_modules ./gitrot-frontend/node_modules
+
+# Create supervisor configuration for development
+RUN mkdir -p /var/log/supervisor
+
+COPY <<EOF /etc/supervisor/conf.d/supervisord.conf
+[supervisord]
+nodaemon=true
+user=root
+logfile=/var/log/supervisor/supervisord.log
+pidfile=/var/run/supervisord.pid
+
+[program:fastapi]
+command=uvicorn fastapi_app:app --host 0.0.0.0 --port 8000 --reload
+directory=/app
+autostart=true
+autorestart=true
+stderr_logfile=/var/log/supervisor/fastapi_err.log
+stdout_logfile=/var/log/supervisor/fastapi_out.log
+environment=PYTHONPATH="/app",GIT_PYTHON_REFRESH="quiet"
+
+[program:nextjs]
+command=npm run dev
+directory=/app/gitrot-frontend
+autostart=true
+autorestart=true
+stderr_logfile=/var/log/supervisor/nextjs_err.log
+stdout_logfile=/var/log/supervisor/nextjs_out.log
+environment=PORT="3000",NODE_ENV="development"
+
+[unix_http_server]
+file=/var/run/supervisor.sock
+
+[supervisorctl]
+serverurl=unix:///var/run/supervisor.sock
+
+[rpcinterface:supervisor]
+supervisor.rpcinterface_factory = supervisor.rpcinterface:make_main_rpcinterface
+EOF
+
+# Create development startup script
+COPY <<EOF /app/start-dev.sh
+#!/bin/bash
+set -e
+
+echo "🚀 Starting GitRot Development Environment..."
+echo "📡 FastAPI (with reload) will be available on port 8000"
+echo "🎨 Next.js (with hot reload) will be available on port 3000"
+
+# Set Git environment variables
+export GIT_PYTHON_REFRESH=quiet
+export GIT_PYTHON_GIT_EXECUTABLE=\$(which git)
+
+# Start supervisor
+exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+EOF
+
+RUN chmod +x /app/start-dev.sh
+
+# Expose ports
+EXPOSE 3000 8000
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV NODE_ENV=development
+ENV GIT_PYTHON_REFRESH=quiet
+
+# Start the application in development mode
+CMD ["/app/start-dev.sh"]

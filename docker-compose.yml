@@ -1,0 +1,59 @@
+# Docker Compose for GitRot Application
+# Provides both development and production configurations
+
+version: '3.8'
+
+services:
+  gitrot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"  # Next.js frontend
+      - "8000:8000"  # FastAPI backend
+    environment:
+      - NODE_ENV=production
+      - PYTHONPATH=/app
+      - GIT_PYTHON_REFRESH=quiet
+    volumes:
+      # Uncomment for development with live reload
+      # - ./:/app
+      # - /app/node_modules
+      # - /app/gitrot-frontend/node_modules
+      - logs:/var/log/supervisor
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "/app/healthcheck.sh"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # Optional: Development override
+  gitrot-dev:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    ports:
+      - "3000:3000"
+      - "8000:8000"
+    environment:
+      - NODE_ENV=development
+      - PYTHONPATH=/app
+      - GIT_PYTHON_REFRESH=quiet
+    volumes:
+      - ./:/app
+      - /app/node_modules
+      - /app/gitrot-frontend/node_modules
+      - logs:/var/log/supervisor
+    restart: unless-stopped
+    profiles:
+      - dev
+
+volumes:
+  logs:
+    driver: local
+
+networks:
+  default:
+    name: gitrot-network
