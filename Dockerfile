@@ -115,42 +115,16 @@ RUN chown -R gitrot:gitrot /app \
     && chown -R gitrot:gitrot /var/log/supervisor \
     && chmod -R 755 /app
 
-# Create startup script
-COPY <<EOF /app/start.sh
-#!/bin/bash
-set -e
-
-echo "🚀 Starting GitRot Application..."
-echo "📡 FastAPI will be available on port 8000"
-echo "🎨 Next.js will be available on port 3000"
-
-# Set Git environment variables
-export GIT_PYTHON_REFRESH=quiet
-export GIT_PYTHON_GIT_EXECUTABLE=\$(which git)
-
-# Start supervisor
-exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
-EOF
-
-# Make startup script executable
-RUN chmod +x /app/start.sh
-
-# Create healthcheck script
-COPY <<EOF /app/healthcheck.sh
-#!/bin/bash
-# Health check for both services
-curl -f http://localhost:8000/health || exit 1
-curl -f http://localhost:3000/ || exit 1
-EOF
-
-RUN chmod +x /app/healthcheck.sh
+# Copy and setup startup script
+COPY start.sh /app/start.sh
+RUN chmod +x /app/start.sh && sed -i 's/\r$//' /app/start.sh
 
 # Expose ports
 EXPOSE 3000 8000
 
-# Add health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
-    CMD /app/healthcheck.sh
+# Add health check (optional - can be removed if not needed)
+# HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
+#     CMD curl -f http://localhost:3000/ || exit 1
 
 # Set environment variables
 ENV PYTHONPATH=/app
