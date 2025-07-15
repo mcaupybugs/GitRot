@@ -1,0 +1,66 @@
+name: Deploy to Kubernetes
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Environment to deploy to"
+        required: true
+        default: "staging"
+        type: choice
+        options:
+          - staging
+          - production
+
+env:
+  NAMESPACE: gitrot
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: "latest"
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Verify connection
+        run: |
+          kubectl cluster-info
+          kubectl get nodes
+
+      - name: Deploy to Kubernetes
+        run: |
+          cd charts/gitrot
+
+          # Apply all manifests
+          kubectl apply -f namespace.yaml
+          kubectl apply -f backend-deployment.yaml -n ${{ env.NAMESPACE }}
+          kubectl apply -f backend-service.yaml -n ${{ env.NAMESPACE }}
+          kubectl apply -f frontend-deployment.yaml -n ${{ env.NAMESPACE }}
+          kubectl apply -f frontend-service.yaml -n ${{ env.NAMESPACE }}
+
+      - name: Wait for deployment
+        run: |
+          kubectl wait --for=condition=available --timeout=300s deployment/gitrot-backend -n ${{ env.NAMESPACE }}
+          kubectl wait --for=condition=available --timeout=300s deployment/gitrot-frontend -n ${{ env.NAMESPACE }}
+
+      - name: Get deployment status
+        run: |
+          echo "## 🚀 Deployment Status" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Services" >> $GITHUB_STEP_SUMMARY
+          kubectl get services -n ${{ env.NAMESPACE }} >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Pods" >> $GITHUB_STEP_SUMMARY
+          kubectl get pods -n ${{ env.NAMESPACE }} >> $GITHUB_STEP_SUMMARY
