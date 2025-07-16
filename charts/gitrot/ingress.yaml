@@ -1,0 +1,29 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: gitrot-ingress
+  namespace: gitrot
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    nginx.ingress.kubernetes.io/use-regex: "true"
+spec:
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          # Backend API routes - rewrite /api/foo to /foo
+          - path: /api/(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: gitrot-backend-service
+                port:
+                  number: 8000
+          # Frontend routes (everything else including static files)
+          - path: /(.*)
+            pathType: ImplementationSpecific
+            backend:
+              service:
+                name: gitrot-frontend-service
+                port:
+                  number: 3000

@@ -1,0 +1,70 @@
+name: Build and Deploy to Kubernetes
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Image tag to build and deploy"
+        required: false
+        default: "latest"
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Build and push Docker images
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push images
+        run: |
+          TAG=${{ github.event.inputs.tag }}
+
+          # Build and push backend
+          cd backend
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/gitrot-backend:$TAG .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/gitrot-backend:$TAG
+
+          # Build and push frontend
+          cd ../gitrot-frontend
+          docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/gitrot-frontend:$TAG .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/gitrot-frontend:$TAG
+
+      # Deploy to Kubernetes
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v3
+
+      - name: Configure kubectl
+        run: |
+          mkdir -p ~/.kube
+          echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > ~/.kube/config
+
+      - name: Update image tags and deploy
+        run: |
+          TAG=${{ github.event.inputs.tag }}
+          cd charts/gitrot
+
+          # Update image tags in deployments
+          sed -i "s|mcaupybugs/gitrot-backend:.*|mcaupybugs/gitrot-backend:$TAG|" backend-deployment.yaml
+          sed -i "s|mcaupybugs/gitrot-frontend:.*|mcaupybugs/gitrot-frontend:$TAG|" frontend-deployment.yaml
+
+          # Deploy
+          kubectl apply -f namespace.yaml
+          kubectl apply -f . -n gitrot
+
+          # Wait for rollout
+          kubectl rollout status deployment/gitrot-backend -n gitrot
+          kubectl rollout status deployment/gitrot-frontend -n gitrot
+
+      - name: Get service info
+        run: |
+          echo "✅ Deployment complete!"
+          kubectl get services -n gitrot
+          kubectl get pods -n gitrot
