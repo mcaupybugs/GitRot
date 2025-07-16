@@ -106,8 +106,8 @@ The project includes scripts for deployment to Azure App Services:
 
 ## 🤝 Contributing
 
-Contributions are welcome! Please see the `CONTRIBUTING.md` for details on how to contribute to this project. (Note: This file does not exist yet.)
+Contributions are welcome! Please see the `CONTRIBUTING.md` for details on how to contribute to this project.
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the `LICENSE` file for details. (Note: This file does not exist yet.) 
+This project is licensed under the MIT License - see the `LICENSE` file for details. 
