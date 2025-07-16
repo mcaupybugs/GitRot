@@ -93,7 +93,7 @@ async def home_page(request: Request):
         logger.error(f"Error serving home page: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal server error")
 
-@app.post("/api/generate-readme", response_model=ReadmeResponse)
+@app.post("/generate-readme", response_model=ReadmeResponse)
 @log_request_metrics
 async def generate_readme(request: ReadmeRequest, http_request: Request):
     """
