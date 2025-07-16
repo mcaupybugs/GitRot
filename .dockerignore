@@ -1,0 +1,100 @@
+# GitRot .dockerignore
+# Exclude files and directories that shouldn't be copied to Docker image
+
+# Version control
+.git
+.gitignore
+.gitattributes
+
+# Development files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.test
+.env.production
+.env.example
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+gitrot/
+.venv/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Next.js
+.next/
+out/
+build/
+dist/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage directory used by tools like istanbul
+coverage/
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# IDE
+*.sublime-project
+*.sublime-workspace
+
+# Documentation
+README.md
+docs/
+*.md
+
+# Development scripts
+start-dev.sh
+startup-*.sh
+
+# Docker files (except Dockerfile itself)
+docker-compose.override.yml
+docker-compose.dev.yml
+
+# Testing
+.coverage
+.pytest_cache/
+test-results/
+
+# Temporary files
+tmp/
+temp/

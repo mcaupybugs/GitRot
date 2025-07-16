@@ -1,30 +1,38 @@
 # CODEOWNERS file for GitRot repository
+
 # This file defines who owns and must approve changes to specific parts of the codebase
+
 # Repository owner: @mcaupybugs
 
-# Global ownership - all files require approval from repository owner
-* @mcaupybugs
+# Global ownership - all files require approval from repository owner.
+
+- @mcaupybugs
 
 # Critical infrastructure and configuration files
+
 /.github/ @mcaupybugs
 /.github/workflows/ @mcaupybugs
 /docker-compose.yml @mcaupybugs
 /scripts/ @mcaupybugs
 
-# Backend application and Docker configuration  
+# Backend application and Docker configuration
+
 /backend/ @mcaupybugs
 /backend/Dockerfile @mcaupybugs
 /backend/requirements.txt @mcaupybugs
 
 # Frontend application and Docker configuration
+
 /gitrot-frontend/ @mcaupybugs
 /gitrot-frontend/Dockerfile @mcaupybugs
 /gitrot-frontend/package.json @mcaupybugs
 
 # Documentation and README files
-*.md @mcaupybugs
+
+\*.md @mcaupybugs
 /README.md @mcaupybugs
 
 # Security and configuration files
+
 .gitignore @mcaupybugs
 .dockerignore @mcaupybugs

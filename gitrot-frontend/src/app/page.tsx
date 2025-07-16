@@ -31,11 +31,8 @@ export default function HomePage() {
     setIsLoading(true);
 
     try {
-      // Get API URL from environment variable
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-
-      // Call your FastAPI backend
-      const response = await fetch(`${apiUrl}/api/generate-readme`, {
+      // Use relative URL - ingress will route to backend
+      const response = await fetch("/api/generate-readme", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
