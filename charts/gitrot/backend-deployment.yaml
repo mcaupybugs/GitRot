@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gitrot-backend
+  namespace: gitrot
   labels:
     app: gitrot-backend
 spec:
@@ -13,7 +14,9 @@ spec:
     metadata:
       labels:
         app: gitrot-backend
+        azure.workload.identity/use: "true"
     spec:
+      serviceAccountName: gitrot-workload-identity
       containers:
         - name: backend
           image: mcaupybugs/gitrot-backend:latest
@@ -24,6 +27,20 @@ spec:
               value: "8000"
             - name: ENVIRONMENT
               value: "production"
+            - name: AZURE_OPENAI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gitrot-app-secrets
+                  key: AZURE_OPENAI_API_KEY
+            - name: GEMINI_API_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: gitrot-app-secrets
+                  key: GEMINI_API_KEY
+          volumeMounts:
+            - name: secrets-store
+              mountPath: "/mnt/keyvault-secrets"
+              readOnly: true
           resources:
             requests:
               memory: "256Mi"
@@ -43,3 +60,10 @@ spec:
               port: 8000
             initialDelaySeconds: 5
             periodSeconds: 5
+      volumes:
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "gitrot-keyvault-secrets"

@@ -1,0 +1,9 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  annotations:
+    azure.workload.identity/client-id: "5a2f33f4-e2e8-4ca6-8a2d-33862dfe9e8d"
+  labels:
+    azure.workload.identity/use: "true"
+  name: gitrot-workload-identity
+  namespace: gitrot
