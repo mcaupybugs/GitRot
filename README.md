@@ -50,7 +50,7 @@ Before you begin, ensure you have the following installed:
 1.  **Clone the repository:**
 
     ```bash
-    git clone https://github.com/mcaupybugs/GitRot.git # Replace with actual repo URL
+    git clone https://github.com/mcaupybugs/GitRot.git 
     cd GitRot
     ```
 
