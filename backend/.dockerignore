@@ -49,4 +49,9 @@ README.md
 # Temporary files
 temp_repos/
 *.tmp
-*.log
+
+# Downloaded repositories (should not be in Docker image)
+projects/
+cloned_repo/
+
+# Security sensitive files

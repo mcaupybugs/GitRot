@@ -31,8 +31,14 @@ export default function HomePage() {
     setIsLoading(true);
 
     try {
-      // Use relative URL - ingress will route to backend
-      const response = await fetch("/api/generate-readme", {
+      // Use environment-based URL selection
+      const apiUrl =
+        typeof window !== "undefined" &&
+        window.location.hostname === "localhost"
+          ? "http://localhost:8000/generate-readme" // Local development
+          : "/api/generate-readme"; // Production (through ingress)
+
+      const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
