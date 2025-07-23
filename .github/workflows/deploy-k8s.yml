@@ -44,11 +44,9 @@ jobs:
           cd charts/gitrot
 
           # Apply all manifests
+          # Deploy
           kubectl apply -f namespace.yaml
-          kubectl apply -f backend-deployment.yaml -n ${{ env.NAMESPACE }}
-          kubectl apply -f backend-service.yaml -n ${{ env.NAMESPACE }}
-          kubectl apply -f frontend-deployment.yaml -n ${{ env.NAMESPACE }}
-          kubectl apply -f frontend-service.yaml -n ${{ env.NAMESPACE }}
+          kubectl apply -f . -n gitrot
 
       - name: Wait for deployment
         run: |
