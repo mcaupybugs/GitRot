@@ -39,21 +39,41 @@ jobs:
           kubectl cluster-info
           kubectl get nodes
 
+      - name: Install cert-manager (if not exists)
+        run: |
+          # Check if cert-manager namespace exists
+          if ! kubectl get namespace cert-manager &> /dev/null; then
+            echo "Installing cert-manager..."
+            kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.13.0/cert-manager.yaml
+            echo "Waiting for cert-manager to be ready..."
+            kubectl wait --for=condition=available --timeout=300s deployment/cert-manager -n cert-manager
+            kubectl wait --for=condition=available --timeout=300s deployment/cert-manager-cainjector -n cert-manager
+            kubectl wait --for=condition=available --timeout=300s deployment/cert-manager-webhook -n cert-manager
+            echo "cert-manager installed successfully!"
+          else
+            echo "cert-manager already installed"
+          fi
+
       - name: Deploy to Kubernetes
         run: |
           cd charts/gitrot
 
           # Apply all manifests
+          # Deploy
           kubectl apply -f namespace.yaml
-          kubectl apply -f backend-deployment.yaml -n ${{ env.NAMESPACE }}
-          kubectl apply -f backend-service.yaml -n ${{ env.NAMESPACE }}
-          kubectl apply -f frontend-deployment.yaml -n ${{ env.NAMESPACE }}
-          kubectl apply -f frontend-service.yaml -n ${{ env.NAMESPACE }}
+          kubectl apply -f . -n gitrot
 
       - name: Wait for deployment
         run: |
           kubectl wait --for=condition=available --timeout=300s deployment/gitrot-backend -n ${{ env.NAMESPACE }}
           kubectl wait --for=condition=available --timeout=300s deployment/gitrot-frontend -n ${{ env.NAMESPACE }}
+
+      - name: Check SSL certificate status
+        run: |
+          echo "Checking SSL certificate status..."
+          kubectl get certificate -n ${{ env.NAMESPACE }} || echo "No certificates found yet"
+          # Wait a bit for certificate to be processed
+          kubectl wait --for=condition=ready certificate/gitrot-tls --timeout=300s -n ${{ env.NAMESPACE }} || echo "Certificate still being processed..."
 
       - name: Get deployment status
         run: |
@@ -64,3 +84,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "### Pods" >> $GITHUB_STEP_SUMMARY
           kubectl get pods -n ${{ env.NAMESPACE }} >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### SSL Certificates" >> $GITHUB_STEP_SUMMARY
+          kubectl get certificate -n ${{ env.NAMESPACE }} >> $GITHUB_STEP_SUMMARY || echo "No certificates found" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Ingress" >> $GITHUB_STEP_SUMMARY
+          kubectl get ingress -n ${{ env.NAMESPACE }} >> $GITHUB_STEP_SUMMARY

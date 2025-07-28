@@ -4,12 +4,23 @@ metadata:
   name: gitrot-ingress
   namespace: gitrot
   annotations:
+    # cert-manager annotation to automatically request SSL certificate
+    cert-manager.io/cluster-issuer: "letsencrypt-http"
+    # nginx ingress annotations
     nginx.ingress.kubernetes.io/rewrite-target: /$1
     nginx.ingress.kubernetes.io/use-regex: "true"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    # Force SSL redirect
+    nginx.ingress.kubernetes.io/force-ssl-redirect: "true"
 spec:
   ingressClassName: nginx
+  tls:
+    - hosts:
+        - gitrot.mcaupybugs.com # Replace with your actual domain
+      secretName: gitrot-tls-secret # This secret will be created by cert-manager
   rules:
-    - http:
+    - host: gitrot.mcaupybugs.com # Replace with your actual domain
+      http:
         paths:
           # Backend API routes - rewrite /api/foo to /foo
           - path: /api/(.*)

@@ -75,12 +75,21 @@ class Helper:
         return code_text
     
     def clone_repo(self, github_url: str, folder_name: str="cloned_repo")-> str:
-        if os.path.exists(folder_name):
-            print(f"Folder '{folder_name}' already exists. Skipping clone.")
+        # Create projects directory if it doesn't exist
+        projects_dir = "projects"
+        if not os.path.exists(projects_dir):
+            os.makedirs(projects_dir)
+            print(f"Created '{projects_dir}' directory")
+        
+        # Create full path inside projects folder
+        full_path = os.path.join(projects_dir, folder_name)
+        
+        if os.path.exists(full_path):
+            print(f"Folder '{full_path}' already exists. Skipping clone.")
         else:
-            Repo.clone_from(github_url, folder_name)
-            print(f"Repository cloned into '{folder_name}'")
-        return folder_name
+            Repo.clone_from(github_url, full_path)
+            print(f"Repository cloned into '{full_path}'")
+        return full_path
     
     def delete_cloned_repo(self, folder_path: str) -> bool:
         """

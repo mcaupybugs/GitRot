@@ -1,2 +1,7 @@
-backend/.env
+.env
+
+# Downloaded repositories
+backend/projects/
+backend/cloned_repo/
+backend/temp_repos/
 backend/gitrot

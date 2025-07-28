@@ -1,0 +1,18 @@
+apiVersion: cert-manager.io/v1
+kind: ClusterIssuer
+metadata:
+  name: letsencrypt-http
+spec:
+  acme:
+    # Let's Encrypt ACME server
+    server: https://acme-v02.api.letsencrypt.org/directory
+    # Email address used for ACME registration
+    email: vishalydv.me@gmail.com
+    # Name of a secret used to store the ACME account private key
+    privateKeySecretRef:
+      name: letsencrypt-http
+    # List of challenge solvers that will be used to solve ACME challenges
+    solvers:
+      - http01:
+          ingress:
+            class: nginx # Use nginx ingress class for HTTP-01 challenges

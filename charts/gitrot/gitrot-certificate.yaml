@@ -1,0 +1,17 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: gitrot-tls
+  namespace: gitrot
+spec:
+  # Secret name where the certificate will be stored
+  secretName: gitrot-tls-secret
+  # Reference to the issuer responsible for issuing the certificate
+  issuerRef:
+    name: letsencrypt-http
+    kind: ClusterIssuer
+  # List of DNS names for which the certificate should be valid
+  dnsNames:
+    - gitrot.mcaupybugs.com
+  # Certificate will automatically renew when it has 30 days left (cert-manager default)
+  # The certificate is valid for 90 days from Let's Encrypt

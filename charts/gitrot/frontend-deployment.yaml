@@ -2,6 +2,7 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: gitrot-frontend
+  namespace: gitrot
   labels:
     app: gitrot-frontend
 spec:
@@ -13,7 +14,9 @@ spec:
     metadata:
       labels:
         app: gitrot-frontend
+        azure.workload.identity/use: "true"
     spec:
+      serviceAccountName: gitrot-workload-identity
       containers:
         - name: frontend
           image: mcaupybugs/gitrot-frontend:latest
@@ -22,6 +25,10 @@ spec:
           env:
             - name: NODE_ENV
               value: "production"
+          volumeMounts:
+            - name: secrets-store
+              mountPath: "/mnt/keyvault-secrets"
+              readOnly: true
           resources:
             requests:
               memory: "256Mi"
@@ -41,3 +48,10 @@ spec:
               port: 3000
             initialDelaySeconds: 5
             periodSeconds: 5
+      volumes:
+        - name: secrets-store
+          csi:
+            driver: secrets-store.csi.k8s.io
+            readOnly: true
+            volumeAttributes:
+              secretProviderClass: "gitrot-keyvault-secrets"
