@@ -29,23 +29,6 @@ class Generators:
 
         chunks = text_splitter.split_text(code_text)
         documents = [Document(page_content=chunk) for chunk in chunks]
-    #     document = Document(
-    #     page_content=chunk,
-    #     metadata={
-    #         "chunk_id": i,
-    #         "chunk_size": len(chunk),
-    #         "source_type": "code_repository",
-    #         "processing_timestamp": datetime.now().isoformat(),
-    #         "file_path": file_info.get("file_path", "unknown"),
-    #         "file_extension": file_info.get("extension", "unknown"),
-    #         "language": detect_language(file_info.get("extension", "")),
-    #         "chunk_total": len(chunks),
-    #         "has_functions": "def " in chunk or "function " in chunk,
-    #         "has_classes": "class " in chunk,
-    #         "line_count": chunk.count('\n'),
-    #         "estimated_tokens": len(chunk) // 4,  # Rough estimate
-    #     }
-    # )
 
         print(f"Split code into {len(documents)} chunks for processing")
         # Create and run the summarize chain
