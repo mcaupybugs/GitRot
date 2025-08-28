@@ -1,17 +1,140 @@
 import os
+import time
+import json
+from typing import Dict, List, Optional
 from langchain_openai import AzureOpenAIEmbeddings
 from langchain_core.documents import Document
-from langchain.chains.summarize import load_summarize_chain
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.vectorstores import FAISS
 from langchain_core.prompts import PromptTemplate
 from langchain.chains import LLMChain
 
 class Generators:
+    def __init__(self):
+        self.retry_state_file = "retry_state.json"
+        self.current_retry_delay = self._load_retry_state()
+    
+    def _load_retry_state(self) -> float:
+        """Load the current retry delay from persistent storage."""
+        try:
+            if os.path.exists(self.retry_state_file):
+                with open(self.retry_state_file, 'r') as f:
+                    data = json.load(f)
+                    return data.get('current_retry_delay', 2.0)
+        except Exception as e:
+            print(f"Error loading retry state: {e}")
+        return 2.0  # Default starting delay
+    
+    def _save_retry_state(self, delay: float):
+        """Save the current retry delay to persistent storage."""
+        try:
+            with open(self.retry_state_file, 'w') as f:
+                json.dump({'current_retry_delay': delay}, f)
+        except Exception as e:
+            print(f"Error saving retry state: {e}")
+    
+    def _reset_retry_state(self):
+        """Reset retry delay to initial value after successful operation."""
+        self.current_retry_delay = 2.0
+        self._save_retry_state(self.current_retry_delay)
+    
+    def _invoke_with_retry(self, llm, prompt: str, max_delay: float = 120.0) -> str:
+        """
+        Invoke LLM with exponential backoff retry logic.
+        
+        Args:
+            llm: The language model instance
+            prompt: The prompt to send
+            max_delay: Maximum retry delay in seconds (default 2 minutes)
+        
+        Returns:
+            Response from LLM
+        """
+        delay = self.current_retry_delay
+        
+        while delay <= max_delay:
+            try:
+                response = llm.invoke(prompt)
+                # Success - reset retry state
+                self._reset_retry_state()
+                return response
+                
+            except Exception as e:
+                error_str = str(e).lower()
+                if any(keyword in error_str for keyword in ['rate limit', 'quota', 'too many requests', 'limit exceeded']):
+                    print(f"Rate limit hit. Waiting {delay} seconds before retry...")
+                    time.sleep(delay)
+                    
+                    # Update and save current retry delay
+                    self.current_retry_delay = min(delay * 2, max_delay)
+                    self._save_retry_state(self.current_retry_delay)
+                    delay = self.current_retry_delay
+                    
+                    print(f"Next retry delay will be: {self.current_retry_delay} seconds")
+                else:
+                    # Non-rate-limit error, re-raise
+                    raise e
+        
+        raise Exception(f"Maximum retry delay of {max_delay} seconds reached. Giving up.")
+    
+    def _summarize_documents_custom(self, llm, documents: List[Document]) -> str:
+        """
+        Custom implementation to replace load_summarize_chain with retry logic.
+        Implements map-reduce pattern manually.
+        """
+        # Step 1: Map phase - summarize each document individually
+        map_prompt_template = """
+        Summarize the following code segment, focusing on key functionality, components, and technologies:
+
+        {text}
+
+        Summary:
+        """
+        
+        individual_summaries = []
+        total_docs = len(documents)
+        
+        for i, doc in enumerate(documents):
+            print(f"Processing document {i+1}/{total_docs}")
+            
+            prompt = map_prompt_template.format(text=doc.page_content)
+            try:
+                summary = self._invoke_with_retry(llm, prompt)
+                individual_summaries.append(summary)
+                print(f"✓ Document {i+1} summarized successfully")
+            except Exception as e:
+                print(f"✗ Failed to process document {i+1}: {e}")
+                # Continue with other documents rather than failing entirely
+                continue
+        
+        if not individual_summaries:
+            raise Exception("Failed to summarize any documents")
+        
+        # Step 2: Reduce phase - combine all summaries
+        print(f"Combining {len(individual_summaries)} individual summaries...")
+        
+        reduce_prompt_template = """
+        Combine the following code summaries into a comprehensive overview of the entire codebase:
+
+        {summaries}
+
+        Create a unified summary that captures:
+        - Overall project purpose and functionality
+        - Key technologies and frameworks used
+        - Main components and their relationships
+        - Important features and capabilities
+
+        Comprehensive Summary:
+        """
+        
+        combined_summaries = "\n\n---\n\n".join(individual_summaries)
+        final_prompt = reduce_prompt_template.format(summaries=combined_summaries)
+        
+        return self._invoke_with_retry(llm, final_prompt)
 
     def summarize_code(self, llm, code_text):
         """
-        Summarize the code using Azure OpenAI and LangChain's summarize chain.
+        Summarize the code using custom retry logic instead of load_summarize_chain.
     
          Args:
             code_text: The text content of the code to summarize
@@ -19,7 +142,8 @@ class Generators:
         Returns:
             A summary of the code
         """
-
+        MAX_CHUNKS = 10  # Limit to prevent overwhelming the API
+        
         # Split the code text into chunks
         text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=3000,  # Characters per chunk (approximately 1000 tokens)
@@ -28,30 +152,18 @@ class Generators:
         )
 
         chunks = text_splitter.split_text(code_text)
+        
         documents = [Document(page_content=chunk) for chunk in chunks]
-    #     document = Document(
-    #     page_content=chunk,
-    #     metadata={
-    #         "chunk_id": i,
-    #         "chunk_size": len(chunk),
-    #         "source_type": "code_repository",
-    #         "processing_timestamp": datetime.now().isoformat(),
-    #         "file_path": file_info.get("file_path", "unknown"),
-    #         "file_extension": file_info.get("extension", "unknown"),
-    #         "language": detect_language(file_info.get("extension", "")),
-    #         "chunk_total": len(chunks),
-    #         "has_functions": "def " in chunk or "function " in chunk,
-    #         "has_classes": "class " in chunk,
-    #         "line_count": chunk.count('\n'),
-    #         "estimated_tokens": len(chunk) // 4,  # Rough estimate
-    #     }
-    # )
-
         print(f"Split code into {len(documents)} chunks for processing")
-        # Create and run the summarize chain
-        chain = load_summarize_chain(llm, chain_type="map_reduce")
-        return chain.invoke({"input_documents": documents})
-    
+        
+        # Use custom summarization with retry logic
+        try:
+            result = self._summarize_documents_custom(llm, documents)
+            return {"output_text": result}  # Return in same format as original
+        except Exception as e:
+            print(f"Summarization failed: {e}")
+            raise
+
     def generate_readme_with_examples_vectorstore(self, llm, embeddings, summary: str) -> str:
         """Generate README using vectorstore for examples rather than raw text inclusion."""
         # Ensure summary is a string
