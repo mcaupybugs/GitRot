@@ -1,13 +1,14 @@
 from gitrot_brain import GitrotBrain
 from helpers import Helper
+from models import ReadmeRequest
 from generators import Generators
 import os
 
 class ReadmeGeneratorApp:
-    def __init__(self):
+    def __init__(self, request: ReadmeRequest):
         self.brain = GitrotBrain()
         self.helper = Helper()
-        self.generator = Generators()
+        self.generator = Generators(request.model_name)
         self.llm = self.brain.getLLM()
         self.embeddings = self.brain.getEmbeddingModel()
 
@@ -20,9 +21,7 @@ class ReadmeGeneratorApp:
         if generator_method == "Standard README":
             readme_content = self.generator.generate_readme(self.llm, summary)
         elif generator_method == "README with Examples":
-            readme_content = self.generator.generate_readme_with_examples_vectorstore(self.llm, self.embeddings, summary)   
-        # For readme with examples.
-        #readme_content = generate_readme_with_examples_vectorstore(summary)
+            readme_content = self.generator.generate_readme_with_examples_vectorstore(self.llm, self.embeddings, summary)
 
         with open(os.path.join(local_path, "GENERATED_README.md"), "w", encoding="utf-8") as f:
             f.write(readme_content)

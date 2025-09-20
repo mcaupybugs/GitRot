@@ -5,3 +5,27 @@ backend/projects/
 backend/cloned_repo/
 backend/temp_repos/
 backend/gitrot
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env/
+.gitrot/
+gitrot/
+backend/gitrot/
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+
+# macOS Finder metadata
+.DS_Store
+.DS_Store?
+._*

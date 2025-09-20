@@ -6,10 +6,13 @@ Azure-optimized README generator with native HTML and AdSense integration
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
-from pydantic import BaseModel
 import logging
 import datetime
 import os
+import asyncio
+import concurrent.futures
+from contextlib import asynccontextmanager
+from models import ReadmeRequest, ReadmeResponse
 from app import ReadmeGeneratorApp
 from api_helper import (
     log_request_metrics, 
@@ -29,13 +32,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+thread_pool = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global thread_pool
+    thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=5)
+    logger.info("Thread pool initiated with 5 workers")
+    yield
+    if thread_pool:
+        thread_pool.shutdown(wait=True)
+        logger.info("Thread pool shutdown completed")
+
 # Azure best practice: Initialize FastAPI with proper metadata
 app = FastAPI(
     title="GitRot - AI README Generator",
     description="Azure OpenAI powered README generator for GitHub repositories",
     version="2.0.0",
     docs_url="/api/docs",
-    redoc_url="/api/redoc"
+    redoc_url="/api/redoc",
+    lifespan=lifespan
 )
 
 # Add CORS middleware for frontend integration
@@ -50,48 +66,6 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
-
-# Pydantic models for API requests
-class ReadmeRequest(BaseModel):
-    repo_url: str
-    generation_method: str = "Standard README"
-
-class ReadmeResponse(BaseModel):
-    success: bool
-    readme_content: str = ""
-    error_message: str = ""
-    generation_timestamp: str
-    repo_url: str
-    generation_method: str
-
-# Azure best practice: Initialize core services with error handling
-try:
-    readme_app = ReadmeGeneratorApp()
-    logger.info("GitRot application initialized successfully")
-except Exception as e:
-    logger.error(f"Failed to initialize GitRot application: {str(e)}")
-    readme_app = None
-
-@app.get("/", response_class=HTMLResponse)
-@log_request_metrics
-async def home_page(request: Request):
-    """
-    Serve the main GitRot HTML page with full AdSense integration
-    Azure best practice: Use proper error handling and logging
-    """
-    try:
-        return templates.TemplateResponse(
-            "home_page.html", 
-            {
-                "request": request,
-                "adsense_publisher_id": "ca-pub-5478826702170077",
-                "app_version": "2.0.0",
-                "current_year": datetime.datetime.now().year
-            }
-        )
-    except Exception as e:
-        logger.error(f"Error serving home page: {str(e)}")
-        raise HTTPException(status_code=500, detail="Internal server error")
 
 @app.post("/generate-readme", response_model=ReadmeResponse)
 @log_request_metrics
@@ -114,12 +88,6 @@ async def generate_readme(request: ReadmeRequest, http_request: Request):
             detail="Invalid GitHub repository URL format"
         )
     
-    if not readme_app:
-        raise HTTPException(
-            status_code=503, 
-            detail="README generator service is unavailable"
-        )
-    
     # Log generation attempt with client info
     client_info = get_client_info(http_request)
     log_generation_attempt(
@@ -131,10 +99,10 @@ async def generate_readme(request: ReadmeRequest, http_request: Request):
     try:
         logger.info(f"Generating README for repository: {sanitize_repo_name(request.repo_url)}")
         
-        # Generate README using existing logic
-        readme_content = readme_app.generate_readme_from_repo_url(
-            request.repo_url, 
-            request.generation_method
+        loop = asyncio.get_event_loop()
+        readme_content = await loop.run_in_executor(
+            thread_pool,
+            lambda: ReadmeGeneratorApp(request).generate_readme_from_repo_url(request.repo_url, request.generation_method)
         )
         
         response = ReadmeResponse(
@@ -157,7 +125,7 @@ async def generate_readme(request: ReadmeRequest, http_request: Request):
             repo_url=request.repo_url,
             generation_method=request.generation_method
         )
-
+    
 @app.get("/health")
 @log_request_metrics
 async def health_check():
@@ -213,7 +181,7 @@ if __name__ == "__main__":
             "fastapi_app:app",
             host="0.0.0.0",
             port=port,
-            reload=False,  # Set to False for production
+            reload=True,  # Set to False for production
             access_log=True
         )
     except ImportError:

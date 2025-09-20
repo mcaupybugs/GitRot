@@ -3,6 +3,8 @@ import shutil
 from git import Repo
 import subprocess
 import logging
+import uuid
+import time
 
 # Azure best practice: Configure logging for deployment monitoring
 logging.basicConfig(
@@ -82,14 +84,38 @@ class Helper:
             print(f"Created '{projects_dir}' directory")
         
         # Create full path inside projects folder
-        full_path = os.path.join(projects_dir, folder_name)
+        unique_suffix = str(uuid.uuid4())[:8]
+        timestamp = str(int(time.time()))
+        unique_folder_name = f"{folder_name}_{timestamp}_{unique_suffix}"
+
+        full_path = os.path.join(projects_dir, unique_folder_name)
+
+        retry_count = 0
+        while os.path.exists(full_path) and retry_count < 5:
+            print(f"⚠️ Folder '{full_path}' exists, trying another name...")
+            retry_count += 1
+            unique_suffix = str(uuid.uuid4())[:8]
+            unique_folder_name = f"{folder_name}_{timestamp}_{retry_count}_{unique_suffix}"
+            full_path = os.path.join(projects_dir, unique_folder_name)
         
-        if os.path.exists(full_path):
-            print(f"Folder '{full_path}' already exists. Skipping clone.")
-        else:
+        try:
+            print(f"🔄 Cloning {github_url} into '{full_path}'...")
             Repo.clone_from(github_url, full_path)
-            print(f"Repository cloned into '{full_path}'")
-        return full_path
+            print(f"✅ Repository cloned successfully into '{full_path}'")
+            return full_path
+            
+        except Exception as e:
+            print(f"❌ Error cloning repository: {e}")
+            
+            # Cleanup partial clone if it exists
+            if os.path.exists(full_path):
+                try:
+                    shutil.rmtree(full_path, ignore_errors=True)
+                    print(f"🧹 Cleaned up partial clone: {full_path}")
+                except:
+                    pass
+            
+            raise
     
     def delete_cloned_repo(self, folder_path: str) -> bool:
         """
