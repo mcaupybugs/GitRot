@@ -29,6 +29,16 @@ class GitrotBrain:
             temperature = temperature,
             max_tokens = max_tokens
         )
+    
+    def get_azure_openai_llm(self, max_tokens: int = 1000, temperature: float = 0.3) -> LangchainAzureOpenAI:
+        return LangchainAzureOpenAI(
+            azure_deployment = self.deployment_name,
+            api_version = self.api_version,
+            azure_endpoint = self.azure_endpoint,
+            api_key = self.api_key,
+            temperature = temperature,
+            max_tokens = max_tokens
+        )
 
     def get_gemini_llm(self, model_name="gemini-1.5-flash", max_tokens: int = 1000, temperature: float = 0.3):
         """
