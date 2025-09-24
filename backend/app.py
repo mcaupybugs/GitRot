@@ -9,7 +9,7 @@ class ReadmeGeneratorApp:
         self.brain = GitrotBrain()
         self.helper = Helper()
         self.generator = Generators(request.model_name)
-        self.llm = self.brain.getLLM()
+        self.llm = self.brain.getLLM(llm_model="gemini")
         self.embeddings = self.brain.getEmbeddingModel()
 
     def generate_readme_from_repo_url(self, github_url: str, generator_method: str = "Standard README"):

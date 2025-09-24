@@ -20,15 +20,18 @@ class GitrotBrain:
         self._gemini_flash_calls = []
         self._gemini_pro_calls = []
         
-    def getLLM(self, max_tokens:int = 1000, temperature: float = 0.3 ) -> LangchainAzureOpenAI:
-        return LangchainAzureOpenAI(
+    def getLLM(self, max_tokens:int = 1000, temperature: float = 0.3, llm_model: str = "azure_open_ai" ) -> LangchainAzureOpenAI:
+        if llm_model == "azure_open_ai":
+            return LangchainAzureOpenAI(
             azure_deployment = self.deployment_name,
             api_version = self.api_version,
             azure_endpoint = self.azure_endpoint,
             api_key = self.api_key,
             temperature = temperature,
             max_tokens = max_tokens
-        )
+            )
+        else:
+            return self.get_gemini_llm()
     
     def get_azure_openai_llm(self, max_tokens: int = 1000, temperature: float = 0.3) -> LangchainAzureOpenAI:
         return LangchainAzureOpenAI(

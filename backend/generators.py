@@ -20,19 +20,29 @@ class Generators:
             separators=["\nFile:", "\n\n", "\n", " ", ""] 
         )
 
+    def _to_text(self, raw):
+        if raw is None:
+            return ""
+        if hasattr(raw, "content"):
+            return raw.content
+        if isinstance(raw, dict):
+            for k in ("output_text", "text", "answer", "content"):
+                v = raw.get(k)
+                if isinstance(v, str):
+                    return v
+        return str(raw)
+
     def recursive_map_reduce(self, llm, documents: list[Document], map_prompt: str, reduce_prompt: str) -> str:
         """Recursively splitting the text into chunks to process into a summary"""
 
-        print(f"Starting the reducing using recursive method")
         summaries = []
         for document in documents:
             curr_prompt = map_prompt.replace('{text}', str(document))
-            summaries.append(llm_rate_limiter.invoke(llm, curr_prompt))
+            summaries.append(self._to_text(llm_rate_limiter.invoke(llm, curr_prompt, max_attempts=None)))
         
         combined_summaries = '\n\n'.join(summaries)
 
         if not self.tokenizer.is_summary_within_size(combined_summaries):
-            print("Size greater than min_input_tokens allowed, splitting again")
             combined_summary_chunks = self.text_splitter.split_text(combined_summaries)
             combined_summary_to_docs = [Document(page_content=chunk) for chunk in combined_summary_chunks]
             reduced_summary = self.recursive_map_reduce(llm, combined_summary_to_docs, map_prompt, reduce_prompt)
@@ -72,11 +82,9 @@ class Generators:
         # This check is not required as we are ensuring this condition in summarize method,
         # but still keeping it here just in case
         if not self.tokenizer.is_summary_within_size(summary):
-            print(f"Summary is large ({len(summary)} chars). Condensing first...")
             docs = [Document(page_content=summary)]
 
             split_docs = self.text_splitter.split_documents(docs)
-            print(f"Split summary into {len(split_docs)} chunks")
 
             map_prompt = "This part of summary is more than expected size, condense it even further while keeping the essense and important concepts intact: {text}"
 
@@ -86,7 +94,6 @@ class Generators:
             condensed_result = self.recursive_map_reduce(llm, docs, map_prompt, reduce_prompt)
             condensed_summary = condensed_result if isinstance(condensed_result, str) else condensed_result.get('output_text', '')
             summary = condensed_summary
-            print(f"Condensed summary from {len(summary)} to {len(condensed_summary)} chars")
         else:
             condensed_summary = summary
 
@@ -111,7 +118,7 @@ class Generators:
         {condensed_summary}
         """
 
-        return llm_rate_limiter.invoke(llm, prompt)
+        return self._to_text(llm_rate_limiter.invoke(llm, prompt, max_attempts=None))
 
     # TODO: This method needs to be fixed after the basic one is robust. 
     def generate_readme_with_examples_vectorstore(self, llm, embeddings, summary: str) -> str:

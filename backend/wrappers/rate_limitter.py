@@ -90,6 +90,7 @@ class LLMRateLimiter:
             self._current_delay = min(self._current_delay * 2, self.max_delay)
             # INFO: The below line is to remove the thundering herd problem
             backoff = self._current_delay + random.uniform(0, min(1.0, self._current_delay * 0.1))
+            print(f"Rate limit is reached, throttling for {self._current_delay} ")
             logger.warning(
                 f"LLMRateLimiter: rate limited (#{self._consecutive_rate_limits}), "
                 f"next delay={self._current_delay:.1f}s, sleeping {backoff:.1f}s"
@@ -110,7 +111,7 @@ class LLMRateLimiter:
                prompt_or_input: Any,
                *,
                is_chain: bool = False,
-               max_attempts: int = 8,
+               max_attempts: Optional[int] = 8,
                invoke_fn: Optional[Callable[[Any, Any], Any]] = None) -> Any:
         """
         Unified invoke wrapper.
@@ -136,7 +137,7 @@ class LLMRateLimiter:
                 self._handle_success()
                 return result
             except Exception as e:
-                if self._should_treat_as_rate_limit(e) and attempt < max_attempts:
+                if self._should_treat_as_rate_limit(e) and (max_attempts is None or attempt < max_attempts):
                     self._handle_rate_limit()
                     continue
                 raise
