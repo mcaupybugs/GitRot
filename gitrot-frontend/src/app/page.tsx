@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ClientSelect } from "@/components/ui/client-select";
 import {
   Github,
   Sparkles,
@@ -14,15 +15,78 @@ import {
   Copy,
   Download,
   CheckCircle,
+  Settings,
+  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/loading-spinner";
+import {
+  getProvider,
+  getAllProviderOptions,
+  getModelOptions,
+  getSelectedModel,
+  DEFAULT_PROVIDER,
+  DEFAULT_MODEL,
+} from "@/lib/modelCatalog";
 
 export default function HomePage() {
   const [githubUrl, setGithubUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [result, setResult] = useState<string | null>(null);
   const [copySuccess, setCopySuccess] = useState(false);
+  const [selectedProvider, setSelectedProvider] = useState(DEFAULT_PROVIDER);
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
+  const [isMounted, setIsMounted] = useState(false);
+
+  // Load persisted selection on mount
+  useEffect(() => {
+    setIsMounted(true);
+    try {
+      const stored = localStorage.getItem("gitrot:modelSelection");
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (parsed.provider && getProvider(parsed.provider)) {
+          setSelectedProvider(parsed.provider);
+          const provider = getProvider(parsed.provider);
+          if (
+            parsed.model &&
+            provider?.models.some((m) => m.id === parsed.model)
+          ) {
+            setSelectedModel(parsed.model);
+          } else if (provider) {
+            setSelectedModel(provider.defaultModel);
+          }
+        }
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, []);
+
+  // Persist selection changes (only after mounted)
+  useEffect(() => {
+    if (!isMounted) return;
+    try {
+      localStorage.setItem(
+        "gitrot:modelSelection",
+        JSON.stringify({
+          provider: selectedProvider,
+          model: selectedModel,
+        })
+      );
+    } catch {
+      // Ignore localStorage errors
+    }
+  }, [selectedProvider, selectedModel, isMounted]);
+
+  // Update model when provider changes
+  const handleProviderChange = (newProvider: string) => {
+    setSelectedProvider(newProvider);
+    const provider = getProvider(newProvider);
+    if (provider) {
+      setSelectedModel(provider.defaultModel);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -38,6 +102,11 @@ export default function HomePage() {
           ? "http://localhost:8000/generate-readme" // Local development
           : "/api/generate-readme"; // Production (through ingress)
 
+      const selectedModelData = getSelectedModel(
+        selectedProvider,
+        selectedModel
+      );
+
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
@@ -46,6 +115,14 @@ export default function HomePage() {
         body: JSON.stringify({
           repo_url: githubUrl,
           generation_method: "Standard README",
+          model_name: selectedModel,
+          provider: selectedProvider,
+          // Add additional model context for better generation
+          model_context: {
+            provider: selectedProvider,
+            model: selectedModel,
+            description: selectedModelData?.description,
+          },
         }),
       });
 
@@ -151,6 +228,73 @@ export default function HomePage() {
                     </div>
                   </div>
 
+                  {/* AI Model Selection */}
+                  <div className="space-y-4 p-4 bg-stone-50 rounded-lg border border-stone-200">
+                    <div className="flex items-center space-x-2">
+                      <Settings className="h-4 w-4 text-stone-600" />
+                      <h3 className="text-sm font-semibold text-stone-700">
+                        AI Configuration
+                      </h3>
+                      <Badge
+                        variant="secondary"
+                        className="text-xs bg-stone-200 text-stone-600"
+                      >
+                        Advanced
+                      </Badge>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <ClientSelect
+                          label="AI Provider"
+                          options={getAllProviderOptions()}
+                          value={selectedProvider}
+                          onValueChange={handleProviderChange}
+                          disabled={isLoading}
+                          placeholder="Choose AI provider..."
+                        />
+                      </div>
+
+                      <div>
+                        <ClientSelect
+                          label="Model"
+                          options={getModelOptions(selectedProvider)}
+                          value={selectedModel}
+                          onValueChange={setSelectedModel}
+                          disabled={isLoading}
+                          placeholder="Choose model..."
+                        />
+                      </div>
+                    </div>
+
+                    {/* Model Performance Indicator */}
+                    {(() => {
+                      const currentModel = getSelectedModel(
+                        selectedProvider,
+                        selectedModel
+                      );
+                      return (
+                        currentModel && (
+                          <div className="flex items-center justify-between text-xs text-stone-600 pt-2 border-t border-stone-200">
+                            <div className="flex items-center space-x-4">
+                              <span className="flex items-center space-x-1">
+                                <Zap className="h-3 w-3" />
+                                <span>Speed: {currentModel.speed}</span>
+                              </span>
+                              <span>Cost: {currentModel.cost}</span>
+                            </div>
+                            {currentModel.recommended && (
+                              <span className="flex items-center space-x-1 text-green-600">
+                                <CheckCircle className="h-3 w-3" />
+                                <span>Recommended</span>
+                              </span>
+                            )}
+                          </div>
+                        )
+                      );
+                    })()}
+                  </div>
+
                   <Button
                     type="submit"
                     disabled={isLoading || !githubUrl}
@@ -162,7 +306,23 @@ export default function HomePage() {
                     {isLoading ? (
                       <>
                         <LoadingSpinner />
-                        <span className="ml-2">Generating README...</span>
+                        <span className="ml-2">
+                          {isMounted ? (
+                            <>
+                              Generating with{" "}
+                              {getProvider(selectedProvider)?.label}{" "}
+                              {
+                                getSelectedModel(
+                                  selectedProvider,
+                                  selectedModel
+                                )?.label
+                              }
+                              ...
+                            </>
+                          ) : (
+                            "Generating README..."
+                          )}
+                        </span>
                       </>
                     ) : (
                       <>
@@ -207,9 +367,29 @@ export default function HomePage() {
               <CardContent className="p-8">
                 <div className="flex items-center justify-between mb-6">
                   <div>
-                    <h3 className="text-lg font-semibold text-stone-900">
-                      Generated README
-                    </h3>
+                    <div className="flex items-center space-x-2 mb-1">
+                      <h3 className="text-lg font-semibold text-stone-900">
+                        Generated README
+                      </h3>
+                      <Badge
+                        variant="secondary"
+                        className="text-xs bg-green-100 text-green-700"
+                      >
+                        {isMounted ? getProvider(selectedProvider)?.icon : "🤖"}{" "}
+                        {isMounted
+                          ? getProvider(selectedProvider)?.label
+                          : "AI"}
+                      </Badge>
+                      <Badge
+                        variant="outline"
+                        className="text-xs border-stone-200"
+                      >
+                        {isMounted
+                          ? getSelectedModel(selectedProvider, selectedModel)
+                              ?.label
+                          : "Model"}
+                      </Badge>
+                    </div>
                     <p className="text-sm text-stone-600">
                       Your AI-generated documentation is ready
                     </p>
@@ -273,7 +453,13 @@ export default function HomePage() {
         {/* Footer */}
         <div className="text-center mt-16">
           <p className="text-sm text-stone-500">
-            Powered by Azure OpenAI • Made with ❤️ for developers
+            Powered by{" "}
+            {isMounted
+              ? `${getProvider(selectedProvider)?.label} ${
+                  getSelectedModel(selectedProvider, selectedModel)?.label
+                }`
+              : "AI"}{" "}
+            • Made with ❤️ for developers
           </p>
         </div>
       </div>
