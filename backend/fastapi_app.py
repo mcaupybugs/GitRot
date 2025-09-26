@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
 import logging
+import time
 import datetime
 import os
 import asyncio
@@ -87,7 +88,7 @@ async def generate_readme(request: ReadmeRequest, http_request: Request):
             status_code=400,
             detail="Invalid GitHub repository URL format"
         )
-    
+
     # Log generation attempt with client info
     client_info = get_client_info(http_request)
     log_generation_attempt(
@@ -102,7 +103,7 @@ async def generate_readme(request: ReadmeRequest, http_request: Request):
         loop = asyncio.get_event_loop()
         readme_content = await loop.run_in_executor(
             thread_pool,
-            lambda: ReadmeGeneratorApp(request).generate_readme_from_repo_url(request.repo_url, request.generation_method)
+            lambda: ReadmeGeneratorApp(request).generate_readme_from_repo_url(request)
         )
         
         response = ReadmeResponse(

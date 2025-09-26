@@ -1,0 +1,1 @@
+# Tests for GitRot backend configuration modules

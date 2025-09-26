@@ -5,6 +5,7 @@ class ReadmeRequest(BaseModel):
     repo_url: str
     generation_method: str = "Standard README"
     model_name: str = "gpt-35-turbo-instruct"
+    provider: str
     max_tokens: int = 1000
     temperature: float = 0.3
 
