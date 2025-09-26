@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ClientSelect } from "@/components/ui/client-select";
+import { Select } from "@/components/ui/select";
 import {
   Github,
   Sparkles,
@@ -25,6 +25,7 @@ import {
   getAllProviderOptions,
   getModelOptions,
   getSelectedModel,
+  getBackendModelPayload,
   DEFAULT_PROVIDER,
   DEFAULT_MODEL,
 } from "@/lib/modelCatalog";
@@ -102,7 +103,7 @@ export default function HomePage() {
           ? "http://localhost:8000/generate-readme" // Local development
           : "/api/generate-readme"; // Production (through ingress)
 
-      const selectedModelData = getSelectedModel(
+      const backendPayload = getBackendModelPayload(
         selectedProvider,
         selectedModel
       );
@@ -115,14 +116,7 @@ export default function HomePage() {
         body: JSON.stringify({
           repo_url: githubUrl,
           generation_method: "Standard README",
-          model_name: selectedModel,
-          provider: selectedProvider,
-          // Add additional model context for better generation
-          model_context: {
-            provider: selectedProvider,
-            model: selectedModel,
-            description: selectedModelData?.description,
-          },
+          ...backendPayload, // Spread the backend-compatible payload
         }),
       });
 
@@ -245,7 +239,7 @@ export default function HomePage() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <ClientSelect
+                        <Select
                           label="AI Provider"
                           options={getAllProviderOptions()}
                           value={selectedProvider}
@@ -256,7 +250,7 @@ export default function HomePage() {
                       </div>
 
                       <div>
-                        <ClientSelect
+                        <Select
                           label="Model"
                           options={getModelOptions(selectedProvider)}
                           value={selectedModel}

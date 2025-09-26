@@ -8,12 +8,16 @@ from langchain_core.prompts import PromptTemplate
 from langchain.chains import LLMChain
 from utils import TokenCalculator
 from wrappers.rate_limitter import llm_rate_limiter
+from config.model_config import get_model_config
+
 
 #TODO: Add a normalizer to create the right tags etc to the readme.
 class Generators:
 
     def __init__(self, model_name: str):
-        self.tokenizer = TokenCalculator(model_name)
+        # TODO: Use this model to use variable instead of hardcoded values
+        self.request_model_config = get_model_config(model_name=model_name)
+        self.tokenizer = TokenCalculator(model_name=model_name)
         self.text_splitter = RecursiveCharacterTextSplitter(
             chunk_size=3000,
             chunk_overlap=200,

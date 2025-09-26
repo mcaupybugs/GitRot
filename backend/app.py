@@ -2,18 +2,20 @@ from gitrot_brain import GitrotBrain
 from helpers import Helper
 from models import ReadmeRequest
 from generators import Generators
+from config.model_credential_factory import model_credential_factory
 import os
 
 class ReadmeGeneratorApp:
     def __init__(self, request: ReadmeRequest):
-        self.brain = GitrotBrain()
+        self.brain = GitrotBrain(request.model_name)
         self.helper = Helper()
         self.generator = Generators(request.model_name)
-        self.llm = self.brain.getLLM(llm_model="gemini")
-        self.embeddings = self.brain.getEmbeddingModel()
+        self.llm = self.brain.get_llm()
 
-    def generate_readme_from_repo_url(self, github_url: str, generator_method: str = "Standard README"):
-        repo_name = github_url.rstrip('/').split('/')[-1]
+    def generate_readme_from_repo_url(self, request: ReadmeRequest):
+        github_url = request.repo_url
+        generator_method = request.generation_method
+        repo_name = request.repo_url.rstrip('/').split('/')[-1]
         local_path = self.helper.clone_repo(github_url, repo_name)
         code_text = self.helper.extract_code_from_repo(local_path)
         summary = self.generator.summarize_code(self.llm, code_text)
