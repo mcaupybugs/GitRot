@@ -130,7 +130,7 @@ export default function HomePage() {
       const apiUrl =
         typeof window !== "undefined" &&
         window.location.hostname === "localhost"
-          ? "http://localhost:8001/generate-readme" // Local development (updated port)
+          ? "http://localhost:8000/generate-readme" // Local development (updated port)
           : "/api/generate-readme"; // Production (through ingress)
 
       const backendPayload = getBackendModelPayload(
