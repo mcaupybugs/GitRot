@@ -1,16 +1,22 @@
 from gitrot_brain import GitrotBrain
 from helpers import Helper
-from models import ReadmeRequest
+from models import ReadmeRequest, CustomCredentials
 from generators import Generators
 from config.model_credential_factory import model_credential_factory
 import os
 
 class ReadmeGeneratorApp:
     def __init__(self, request: ReadmeRequest):
-        self.brain = GitrotBrain(request.model_name)
+        # Initialize brain with custom credentials if provided
+        if not request.use_hosted_service and request.custom_credentials:
+            self.brain = GitrotBrain(request.model_name, custom_credentials=request.custom_credentials)
+        else:
+            self.brain = GitrotBrain(request.model_name)
+        
         self.helper = Helper()
         self.generator = Generators(request.model_name)
         self.llm = self.brain.get_llm()
+        self.embeddings = self.brain.getEmbeddingModel() if request.use_hosted_service else None
 
     def generate_readme_from_repo_url(self, request: ReadmeRequest):
         github_url = request.repo_url

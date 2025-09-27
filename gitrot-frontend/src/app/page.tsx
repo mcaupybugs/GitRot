@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Select } from "@/components/ui/select";
 import {
   Github,
   Sparkles,
@@ -15,20 +14,26 @@ import {
   Copy,
   Download,
   CheckCircle,
-  Settings,
-  Zap,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LoadingSpinner } from "@/components/loading-spinner";
 import {
   getProvider,
-  getAllProviderOptions,
-  getModelOptions,
   getSelectedModel,
   getBackendModelPayload,
   DEFAULT_PROVIDER,
   DEFAULT_MODEL,
 } from "@/lib/modelCatalog";
+import ConfigurationPanel from "@/components/ConfigurationPanel";
+
+interface CustomCredentials {
+  azure_api_key?: string;
+  azure_endpoint?: string;
+  azure_api_version?: string;
+  azure_deployment?: string;
+  google_api_key?: string;
+  openai_api_key?: string;
+}
 
 export default function HomePage() {
   const [githubUrl, setGithubUrl] = useState("");
@@ -38,6 +43,12 @@ export default function HomePage() {
   const [selectedProvider, setSelectedProvider] = useState(DEFAULT_PROVIDER);
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
   const [isMounted, setIsMounted] = useState(false);
+
+  // Configuration state
+  const [useHostedService, setUseHostedService] = useState(true);
+  const [customCredentials, setCustomCredentials] = useState<CustomCredentials>(
+    {}
+  );
 
   // Load persisted selection on mount
   useEffect(() => {
@@ -89,6 +100,25 @@ export default function HomePage() {
     }
   };
 
+  // Helper function to check if configuration is valid
+  const isConfigurationValid = () => {
+    if (useHostedService) return true;
+
+    if (selectedProvider === "azure_openai") {
+      return !!(
+        customCredentials.azure_api_key &&
+        customCredentials.azure_endpoint &&
+        customCredentials.azure_deployment
+      );
+    }
+
+    if (selectedProvider === "google") {
+      return !!customCredentials.google_api_key;
+    }
+
+    return false;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!githubUrl) return;
@@ -100,7 +130,7 @@ export default function HomePage() {
       const apiUrl =
         typeof window !== "undefined" &&
         window.location.hostname === "localhost"
-          ? "http://localhost:8000/generate-readme" // Local development
+          ? "http://localhost:8000/generate-readme" // Local development (updated port)
           : "/api/generate-readme"; // Production (through ingress)
 
       const backendPayload = getBackendModelPayload(
@@ -108,16 +138,21 @@ export default function HomePage() {
         selectedModel
       );
 
+      // Build the request payload with configuration
+      const requestPayload = {
+        repo_url: githubUrl,
+        generation_method: "Standard README",
+        use_hosted_service: useHostedService,
+        custom_credentials: useHostedService ? null : customCredentials,
+        ...backendPayload, // Spread the backend-compatible payload
+      };
+
       const response = await fetch(apiUrl, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          repo_url: githubUrl,
-          generation_method: "Standard README",
-          ...backendPayload, // Spread the backend-compatible payload
-        }),
+        body: JSON.stringify(requestPayload),
       });
 
       if (!response.ok) {
@@ -222,76 +257,23 @@ export default function HomePage() {
                     </div>
                   </div>
 
-                  {/* AI Model Selection */}
-                  <div className="space-y-4 p-4 bg-stone-50 rounded-lg border border-stone-200">
-                    <div className="flex items-center space-x-2">
-                      <Settings className="h-4 w-4 text-stone-600" />
-                      <h3 className="text-sm font-semibold text-stone-700">
-                        AI Configuration
-                      </h3>
-                      <Badge
-                        variant="secondary"
-                        className="text-xs bg-stone-200 text-stone-600"
-                      >
-                        Advanced
-                      </Badge>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Select
-                          label="AI Provider"
-                          options={getAllProviderOptions()}
-                          value={selectedProvider}
-                          onValueChange={handleProviderChange}
-                          disabled={isLoading}
-                          placeholder="Choose AI provider..."
-                        />
-                      </div>
-
-                      <div>
-                        <Select
-                          label="Model"
-                          options={getModelOptions(selectedProvider)}
-                          value={selectedModel}
-                          onValueChange={setSelectedModel}
-                          disabled={isLoading}
-                          placeholder="Choose model..."
-                        />
-                      </div>
-                    </div>
-
-                    {/* Model Performance Indicator */}
-                    {(() => {
-                      const currentModel = getSelectedModel(
-                        selectedProvider,
-                        selectedModel
-                      );
-                      return (
-                        currentModel && (
-                          <div className="flex items-center justify-between text-xs text-stone-600 pt-2 border-t border-stone-200">
-                            <div className="flex items-center space-x-4">
-                              <span className="flex items-center space-x-1">
-                                <Zap className="h-3 w-3" />
-                                <span>Speed: {currentModel.speed}</span>
-                              </span>
-                              <span>Cost: {currentModel.cost}</span>
-                            </div>
-                            {currentModel.recommended && (
-                              <span className="flex items-center space-x-1 text-green-600">
-                                <CheckCircle className="h-3 w-3" />
-                                <span>Recommended</span>
-                              </span>
-                            )}
-                          </div>
-                        )
-                      );
-                    })()}
-                  </div>
+                  {/* AI Configuration Panel */}
+                  <ConfigurationPanel
+                    selectedProvider={selectedProvider}
+                    selectedModel={selectedModel}
+                    useHostedService={useHostedService}
+                    customCredentials={customCredentials}
+                    onUseHostedServiceChange={setUseHostedService}
+                    onCustomCredentialsChange={setCustomCredentials}
+                    onProviderChange={handleProviderChange}
+                    onModelChange={setSelectedModel}
+                  />
 
                   <Button
                     type="submit"
-                    disabled={isLoading || !githubUrl}
+                    disabled={
+                      isLoading || !githubUrl || !isConfigurationValid()
+                    }
                     className={cn(
                       "w-full h-12 bg-stone-900 hover:bg-stone-800 text-white",
                       "disabled:opacity-50 disabled:cursor-not-allowed"
