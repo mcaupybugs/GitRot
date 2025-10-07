@@ -205,122 +205,114 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-50 to-stone-100">
-      <div className="container mx-auto px-4 py-16">
-        {/* Hero Section */}
-        <div className="text-center mb-16">
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <div className="h-8 w-8 bg-stone-900 rounded-lg flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-white" />
-            </div>
-            <h1 className="text-3xl font-bold text-stone-900">GitRot</h1>
-            <Badge variant="secondary" className="bg-stone-200 text-stone-700">
-              AI-Powered
-            </Badge>
+    <div className="container mx-auto px-4 py-8">
+      {/* Hero Section */}
+      <div className="text-center mb-16">
+        <div className="flex items-center justify-center gap-2 mb-6">
+          <div className="h-8 w-8 bg-stone-900 rounded-lg flex items-center justify-center">
+            <Sparkles className="h-5 w-5 text-white" />
           </div>
-
-          <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-stone-900 mb-6 leading-tight">
-            Turn chaos into <span className="text-stone-600">clarity.</span>
-          </h2>
-
-          <p className="text-lg text-stone-600 mb-12 max-w-2xl mx-auto">
-            GitRot is the intelligent companion that helps you transform your
-            GitHub repositories into professional, comprehensive documentation.
-          </p>
+          <h1 className="text-3xl font-bold text-stone-900">GitRot</h1>
+          <Badge variant="secondary" className="bg-stone-200 text-stone-700">
+            AI-Powered
+          </Badge>
         </div>
 
-        {/* Main Interface */}
-        <div className="max-w-4xl mx-auto">
-          {!result ? (
-            <Card className="border-stone-200 shadow-sm">
-              <CardContent className="p-8">
-                <form onSubmit={handleSubmit} className="space-y-6">
-                  <div className="space-y-2">
-                    <label
-                      htmlFor="github-url"
-                      className="text-sm font-medium text-stone-700"
-                    >
-                      GitHub Repository URL
-                    </label>
-                    <div className="relative">
-                      <Github className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-400 h-4 w-4" />
-                      <Input
-                        id="github-url"
-                        type="url"
-                        value={githubUrl}
-                        onChange={(e) => setGithubUrl(e.target.value)}
-                        placeholder="https://github.com/username/repository"
-                        className="pl-10 h-12 border-stone-200 focus:border-stone-400 focus:ring-stone-400"
-                        required
-                        disabled={isLoading}
-                      />
-                    </div>
-                  </div>
+        <h2 className="text-4xl md:text-5xl lg:text-6xl font-bold text-stone-900 mb-6 leading-tight">
+          Turn chaos into <span className="text-stone-600">clarity.</span>
+        </h2>
 
-                  {/* AI Configuration Panel */}
-                  <ConfigurationPanel
-                    selectedProvider={selectedProvider}
-                    selectedModel={selectedModel}
-                    useHostedService={useHostedService}
-                    customCredentials={customCredentials}
-                    onUseHostedServiceChange={setUseHostedService}
-                    onCustomCredentialsChange={setCustomCredentials}
-                    onProviderChange={handleProviderChange}
-                    onModelChange={setSelectedModel}
-                  />
+        <p className="text-lg text-stone-600 mb-12 max-w-2xl mx-auto">
+          GitRot is the intelligent companion that helps you transform your
+          GitHub repositories into professional, comprehensive documentation.
+        </p>
+      </div>
 
-                  <Button
-                    type="submit"
-                    disabled={
-                      isLoading || !githubUrl || !isConfigurationValid()
-                    }
-                    className={cn(
-                      "w-full h-12 bg-stone-900 hover:bg-stone-800 text-white",
-                      "disabled:opacity-50 disabled:cursor-not-allowed"
-                    )}
+      {/* Main Interface */}
+      <div className="max-w-4xl mx-auto">
+        {!result ? (
+          <Card className="border-stone-200 shadow-sm">
+            <CardContent className="p-8">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-2">
+                  <label
+                    htmlFor="github-url"
+                    className="text-sm font-medium text-stone-700"
                   >
-                    {isLoading ? (
-                      <>
-                        <LoadingSpinner />
-                        <span className="ml-2">
-                          {isMounted ? (
-                            <>
-                              Generating with{" "}
-                              {getProvider(selectedProvider)?.label}{" "}
-                              {
-                                getSelectedModel(
-                                  selectedProvider,
-                                  selectedModel
-                                )?.label
-                              }
-                              ...
-                            </>
-                          ) : (
-                            "Generating README..."
-                          )}
-                        </span>
-                      </>
-                    ) : (
-                      <>
-                        <Sparkles className="mr-2 h-4 w-4" />
-                        Generate README
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
-                </form>
+                    GitHub Repository URL
+                  </label>
+                  <div className="relative">
+                    <Github className="absolute left-3 top-1/2 transform -translate-y-1/2 text-stone-400 h-4 w-4" />
+                    <Input
+                      id="github-url"
+                      type="url"
+                      value={githubUrl}
+                      onChange={(e) => setGithubUrl(e.target.value)}
+                      placeholder="https://github.com/username/repository"
+                      className="pl-10 h-12 border-stone-200 focus:border-stone-400 focus:ring-stone-400"
+                      required
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
 
-                {/* Try it out section */}
-                <div className="mt-8 pt-6 border-t border-stone-200">
-                  <p className="text-sm text-stone-500 text-center mb-4">
-                    New to GitRot? Try these popular repositories:
-                  </p>
-                  <div className="flex flex-wrap gap-2 justify-center">
-                    {[
-                      "facebook/react",
-                      "microsoft/vscode",
-                      "vercel/next.js",
-                    ].map((repo) => (
+                {/* AI Configuration Panel */}
+                <ConfigurationPanel
+                  selectedProvider={selectedProvider}
+                  selectedModel={selectedModel}
+                  useHostedService={useHostedService}
+                  customCredentials={customCredentials}
+                  onUseHostedServiceChange={setUseHostedService}
+                  onCustomCredentialsChange={setCustomCredentials}
+                  onProviderChange={handleProviderChange}
+                  onModelChange={setSelectedModel}
+                />
+
+                <Button
+                  type="submit"
+                  disabled={isLoading || !githubUrl || !isConfigurationValid()}
+                  className={cn(
+                    "w-full h-12 bg-stone-900 hover:bg-stone-800 text-white",
+                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                  )}
+                >
+                  {isLoading ? (
+                    <>
+                      <LoadingSpinner />
+                      <span className="ml-2">
+                        {isMounted ? (
+                          <>
+                            Generating with{" "}
+                            {getProvider(selectedProvider)?.label}{" "}
+                            {
+                              getSelectedModel(selectedProvider, selectedModel)
+                                ?.label
+                            }
+                            ...
+                          </>
+                        ) : (
+                          "Generating README..."
+                        )}
+                      </span>
+                    </>
+                  ) : (
+                    <>
+                      <Sparkles className="mr-2 h-4 w-4" />
+                      Generate README
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    </>
+                  )}
+                </Button>
+              </form>
+
+              {/* Try it out section */}
+              <div className="mt-8 pt-6 border-t border-stone-200">
+                <p className="text-sm text-stone-500 text-center mb-4">
+                  New to GitRot? Try these popular repositories:
+                </p>
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {["facebook/react", "microsoft/vscode", "vercel/next.js"].map(
+                    (repo) => (
                       <Button
                         key={repo}
                         variant="outline"
@@ -333,111 +325,109 @@ export default function HomePage() {
                       >
                         {repo}
                       </Button>
-                    ))}
-                  </div>
+                    )
+                  )}
                 </div>
-              </CardContent>
-            </Card>
-          ) : (
-            <Card className="border-stone-200 shadow-sm">
-              <CardContent className="p-8">
-                <div className="flex items-center justify-between mb-6">
-                  <div>
-                    <div className="flex items-center space-x-2 mb-1">
-                      <h3 className="text-lg font-semibold text-stone-900">
-                        Generated README
-                      </h3>
-                      <Badge
-                        variant="secondary"
-                        className="text-xs bg-green-100 text-green-700"
-                      >
-                        {isMounted ? getProvider(selectedProvider)?.icon : "🤖"}{" "}
-                        {isMounted
-                          ? getProvider(selectedProvider)?.label
-                          : "AI"}
-                      </Badge>
-                      <Badge
-                        variant="outline"
-                        className="text-xs border-stone-200"
-                      >
-                        {isMounted
-                          ? getSelectedModel(selectedProvider, selectedModel)
-                              ?.label
-                          : "Model"}
-                      </Badge>
-                    </div>
-                    <p className="text-sm text-stone-600">
-                      Your AI-generated documentation is ready
-                    </p>
-                  </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={copyToClipboard}
-                      className="border-stone-200 hover:bg-stone-50"
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          <Card className="border-stone-200 shadow-sm">
+            <CardContent className="p-8">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <div className="flex items-center space-x-2 mb-1">
+                    <h3 className="text-lg font-semibold text-stone-900">
+                      Generated README
+                    </h3>
+                    <Badge
+                      variant="secondary"
+                      className="text-xs bg-green-100 text-green-700"
                     >
-                      {copySuccess ? (
-                        <>
-                          <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
-                          Copied!
-                        </>
-                      ) : (
-                        <>
-                          <Copy className="h-4 w-4 mr-2" />
-                          Copy
-                        </>
-                      )}
-                    </Button>
-                    <Button
+                      {isMounted ? getProvider(selectedProvider)?.icon : "🤖"}{" "}
+                      {isMounted ? getProvider(selectedProvider)?.label : "AI"}
+                    </Badge>
+                    <Badge
                       variant="outline"
-                      size="sm"
-                      onClick={downloadReadme}
-                      className="border-stone-200 hover:bg-stone-50"
+                      className="text-xs border-stone-200"
                     >
-                      <Download className="h-4 w-4 mr-2" />
-                      Download
-                    </Button>
+                      {isMounted
+                        ? getSelectedModel(selectedProvider, selectedModel)
+                            ?.label
+                        : "Model"}
+                    </Badge>
                   </div>
+                  <p className="text-sm text-stone-600">
+                    Your AI-generated documentation is ready
+                  </p>
                 </div>
-
-                <div className="bg-stone-50 rounded-lg p-6 border border-stone-200">
-                  <div className="prose prose-stone max-w-none text-sm text-stone-700">
-                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {result}
-                    </ReactMarkdown>
-                  </div>
-                </div>
-
-                <div className="mt-6 text-center">
+                <div className="flex gap-2">
                   <Button
-                    onClick={() => {
-                      setResult(null);
-                      setGithubUrl("");
-                    }}
                     variant="outline"
+                    size="sm"
+                    onClick={copyToClipboard}
                     className="border-stone-200 hover:bg-stone-50"
                   >
-                    Generate Another README
+                    {copySuccess ? (
+                      <>
+                        <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                        Copied!
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="h-4 w-4 mr-2" />
+                        Copy
+                      </>
+                    )}
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={downloadReadme}
+                    className="border-stone-200 hover:bg-stone-50"
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Download
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+              </div>
 
-        {/* Footer */}
-        <div className="text-center mt-16">
-          <p className="text-sm text-stone-500">
-            Powered by{" "}
-            {isMounted
-              ? `${getProvider(selectedProvider)?.label} ${
-                  getSelectedModel(selectedProvider, selectedModel)?.label
-                }`
-              : "AI"}{" "}
-            • Made with ❤️ for developers
-          </p>
-        </div>
+              <div className="bg-stone-50 rounded-lg p-6 border border-stone-200">
+                <div className="prose prose-stone max-w-none text-sm text-stone-700">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {result}
+                  </ReactMarkdown>
+                </div>
+              </div>
+
+              <div className="mt-6 text-center">
+                <Button
+                  onClick={() => {
+                    setResult(null);
+                    setGithubUrl("");
+                  }}
+                  variant="outline"
+                  className="border-stone-200 hover:bg-stone-50"
+                >
+                  Generate Another README
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </div>
+
+      {/* Footer */}
+      <div className="text-center mt-16">
+        <p className="text-sm text-stone-500">
+          Powered by{" "}
+          {isMounted
+            ? `${getProvider(selectedProvider)?.label} ${
+                getSelectedModel(selectedProvider, selectedModel)?.label
+              }`
+            : "AI"}{" "}
+          • Made with ❤️ for developers
+        </p>
       </div>
     </div>
   );

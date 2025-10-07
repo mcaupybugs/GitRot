@@ -5,6 +5,7 @@ backend/projects/
 backend/cloned_repo/
 backend/temp_repos/
 backend/gitrot
+backend/gitrot_dev.db
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
