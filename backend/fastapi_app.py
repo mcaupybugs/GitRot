@@ -3,9 +3,10 @@ FastAPI GitRot Application
 Azure-optimized README generator with native HTML and AdSense integration
 """
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import FastAPI, HTTPException, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, JSONResponse
+from sqlalchemy.orm import Session
 import logging
 import time
 import datetime
@@ -13,7 +14,10 @@ import os
 import asyncio
 import concurrent.futures
 from contextlib import asynccontextmanager
-from models import ReadmeRequest, ReadmeResponse
+from models.request_models import ReadmeRequest, ReadmeResponse
+from models.user_model import UserAuthResponse, UserAuthRequest
+from services.user_service import UserService
+from database.config import get_db, create_tables
 from app import ReadmeGeneratorApp
 from api_helper import (
     log_request_metrics, 
@@ -38,6 +42,7 @@ thread_pool = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     global thread_pool
+    create_tables()
     thread_pool = concurrent.futures.ThreadPoolExecutor(max_workers=5)
     logger.info("Thread pool initiated with 5 workers")
     yield
@@ -67,6 +72,41 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE"],
     allow_headers=["*"],
 )
+
+@app.post("/auth/register-or-login", response_model=UserAuthResponse)
+async def register_or_login(
+    auth_data: UserAuthRequest,
+    db: Session = Depends(get_db)
+):
+    """
+    Register or login a user via OAuth
+    Creates a new user if they dont exist, otherwise returns existing user
+    """
+    try:
+        user, is_new = UserService.register_or_login(db, auth_data)
+
+        print(f"User {user}: {is_new}")
+        return UserAuthResponse(
+            user_id=user.id,
+            is_new=is_new,
+            email=user.email,
+            name=user.name,
+            image = user.image
+        )
+    
+    except ValueError as e:
+        logger.warning(f"Authentication conflict: {str(e)}")
+        raise HTTPException(
+            status_code=409,
+            detail=str(e)
+        )
+    except Exception as e:
+        logger.error(f"Error in register_or_login: {str(e)}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error during authentication"
+        )
+    
 
 @app.post("/generate-readme", response_model=ReadmeResponse)
 @log_request_metrics

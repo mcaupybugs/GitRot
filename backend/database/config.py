@@ -1,5 +1,6 @@
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker, DeclarativeBase
+from sqlalchemy.pool import StaticPool
 from contextlib import contextmanager
 import os
 
@@ -14,14 +15,23 @@ def get_database_url():
 DATABASE_URL = get_database_url()
 IS_SQLITE = DATABASE_URL.startswith("sqlite")
 
-engine = create_engine(
-    DATABASE_URL,
-    echo=False,
-    future=True,
-    connect_args={"check_same_thread": False} if IS_SQLITE else {},
-    pool_size=None if IS_SQLITE else 10,
-    max_overflow=None if IS_SQLITE else 20,
-)
+# SQLite-specific configuration
+if IS_SQLITE:
+    engine = create_engine(
+        DATABASE_URL,
+        echo=False,
+        future=True,
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+else:
+    engine = create_engine(
+        DATABASE_URL,
+        echo=False,
+        future=True,
+        pool_size=10,
+        max_overflow=20,
+    )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
@@ -35,7 +45,7 @@ def get_db():
 
 def create_tables():
     """create database tables"""
-    from backend.database import models
+    from database import models
     Base.metadata.create_all(bind=engine)
 
 @contextmanager

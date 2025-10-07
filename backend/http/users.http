@@ -1,0 +1,123 @@
+### Authentication API Tests
+### Base URL
+@baseUrl = http://localhost:8000
+@apiUrl = {{baseUrl}}
+
+### ============================================
+### Register or Login with Google - New User
+### ============================================
+POST {{apiUrl}}/auth/register-or-login
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "name": "John Doe",
+  "image": "https://lh3.googleusercontent.com/a/default-user",
+  "provider": "google",
+  "provider_id": "google_123456789"
+}
+
+### ============================================
+### Register or Login - Existing User (should return is_new: false)
+### ============================================
+POST {{apiUrl}}/auth/register-or-login
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "name": "John Doe Updated",
+  "image": "https://lh3.googleusercontent.com/a/updated-photo",
+  "provider": "google",
+  "provider_id": "google_123456789"
+}
+
+### ============================================
+### Register or Login - Without Name (optional field)
+### ============================================
+POST {{apiUrl}}/auth/register-or-login
+Content-Type: application/json
+
+{
+  "email": "jane.smith@example.com",
+  "image": "https://lh3.googleusercontent.com/a/jane-photo",
+  "provider": "google",
+  "provider_id": "google_987654321"
+}
+
+### ============================================
+### Register or Login - Without Image (optional field)
+### ============================================
+POST {{apiUrl}}/auth/register-or-login
+Content-Type: application/json
+
+{
+  "email": "bob.wilson@example.com",
+  "name": "Bob Wilson",
+  "provider": "google",
+  "provider_id": "google_111222333"
+}
+
+### ============================================
+### Register or Login - Different Provider (GitHub)
+### ============================================
+POST {{apiUrl}}/auth/register-or-login
+Content-Type: application/json
+
+{
+  "email": "alice.dev@example.com",
+  "name": "Alice Developer",
+  "image": "https://avatars.githubusercontent.com/u/12345",
+  "provider": "github",
+  "provider_id": "github_12345"
+}
+
+### ============================================
+### Register or Login - Conflict Test (same email, different provider)
+### This should return 409 Conflict
+### ============================================
+POST {{apiUrl}}/auth/register-or-login
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "name": "John Doe",
+  "image": "https://avatars.githubusercontent.com/u/67890",
+  "provider": "github",
+  "provider_id": "github_67890"
+}
+
+### ============================================
+### Get User Profile by ID
+### Replace USER_ID_HERE with actual user ID from previous response
+### ============================================
+GET {{apiUrl}}/users/USER_ID_HERE
+
+### ============================================
+### Health Check
+### ============================================
+GET {{apiUrl}}/health
+
+### ============================================
+### Invalid Email Test (should return 422 validation error)
+### ============================================
+POST {{apiUrl}}/auth/register-or-login
+Content-Type: application/json
+
+{
+  "email": "invalid-email",
+  "name": "Test User",
+  "provider": "google",
+  "provider_id": "google_test"
+}
+
+### ============================================
+### Missing Required Fields (should return 422 validation error)
+### ============================================
+POST {{apiUrl}}/auth/register-or-login
+Content-Type: application/json
+
+{
+  "email": "test@example.com",
+  "name": "Test User"
+}
+
